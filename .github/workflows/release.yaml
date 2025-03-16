@@ -1,4 +1,4 @@
-name: Release k8s-ai-agent binary
+name: Release OpsAgent binary
 on:
   push:
     tags:

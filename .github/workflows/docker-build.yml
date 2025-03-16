@@ -6,7 +6,7 @@ on:
 
 env:
   DOCKERHUB_USERNAME: ninesun0318
-  IMAGE_NAME: k8s-ai-agent
+  IMAGE_NAME: OpsAgent
 
 jobs:
   build:

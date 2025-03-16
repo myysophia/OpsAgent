@@ -19,11 +19,11 @@ gox \
     -os="${GOX_OS}" \
     -arch="${GOX_ARCH}" \
     -ldflags="${LDFLAGS}" \
-    -output="build/k8s-ai-agent_{{.OS}}_{{.Arch}}" \
+    -output="build/OpsAgent_{{.OS}}_{{.Arch}}" \
     ./cmd/kube-copilot
 
 # 重命名 Windows 可执行文件
-for file in build/k8s-ai-agent_windows_*; do
+for file in build/OpsAgent_windows_*; do
     if [ -f "$file" ]; then
         mv "$file" "${file}.exe"
     fi
