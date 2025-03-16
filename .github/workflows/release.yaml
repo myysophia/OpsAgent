@@ -1,0 +1,110 @@
+name: Release k8s-ai-agent binary
+on:
+  push:
+    tags:
+      - 'v*'
+      - 'draft-*'
+
+jobs:
+  publishGitRelease:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          check-latest: true
+          go-version: '1.24'
+          cache: true
+          cache-dependency-path: |
+            **/go.sum
+            **/go.mod
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rhash
+
+      - name: Install gox
+        run: go install github.com/mitchellh/gox@v1.0.1
+
+      - name: Set version
+        id: version
+        run: |
+          echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+          echo "VERSION=${VERSION#v}" >> $GITHUB_ENV
+
+      - name: Generate Release Notes
+        id: release_notes
+        run: |
+          # 获取上一个标签
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          
+          # 生成变更日志
+          if [ -n "$PREV_TAG" ]; then
+            echo "Changes since $PREV_TAG:"
+            git log --pretty=format:"* %s (%h)" $PREV_TAG..HEAD
+          else
+            echo "Initial release"
+            git log --pretty=format:"* %s (%h)"
+          fi > release_notes.txt
+
+      - name: Build
+        run: |
+          echo "Current directory: $(pwd)"
+          echo "Directory contents:"
+          ls -la
+          echo "Creating build directory..."
+          mkdir -p build
+          echo "Making xcompile.sh executable..."
+          chmod +x ./scripts/xcompile.sh
+          echo "Running xcompile.sh..."
+          ./scripts/xcompile.sh
+          echo "Build directory contents after compilation:"
+          ls -la build/
+#          # 验证构建结果
+#          for binary in build/*; do
+#            if [ -f "$binary" ]; then
+#              echo "Verifying $binary..."
+#              chmod +x "$binary"
+#              "$binary" version
+#            fi
+#          done
+
+      - name: Create checksums
+        run: |
+          cd build
+          # 列出所有文件并生成校验和
+          for file in *; do
+            if [ -f "$file" ]; then
+              echo "Generating checksums for $file"
+              rhash --sha256 --sha512 --md5 "$file" >> checksums.txt
+            fi
+          done
+          # 调试：检查 checksums.txt 是否生成
+          if [ -f "checksums.txt" ]; then
+            echo "checksums.txt created successfully:"
+            cat checksums.txt
+          else
+            echo "Error: checksums.txt not found"
+            exit 1
+          fi
+
+      - name: List build files
+        run: |
+          echo "Build directory contents:"
+          ls -la build/
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ./build/*
+          draft: ${{ startsWith(github.ref, 'refs/tags/draft-') }}
+          fail_on_unmatched_files: true
+          body_path: release_notes.txt
+          name: ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}

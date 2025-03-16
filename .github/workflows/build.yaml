@@ -1,0 +1,41 @@
+name: Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "master"
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-push-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GH_TOKEN }}
+      - name: Build Docker image
+        run: |
+          version=$(git describe --tags --abbrev)
+          docker build -t ${{ env.REGISTRY }}/${{ github.repository_owner }}/kube-copilot:${version} .
+          docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/kube-copilot:${version}
+          if [ ${GITHUB_REF_NAME} = "master" ]; then
+            docker tag ${{ env.REGISTRY }}/${{ github.repository_owner }}/kube-copilot:${version} ${{ env.REGISTRY }}/${{ github.repository_owner }}/kube-copilot:latest
+            docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/kube-copilot:latest
+          fi
+          if [ ${GITHUB_REF_NAME} = "main" ]; then
+            docker tag ${{ env.REGISTRY }}/${{ github.repository_owner }}/kube-copilot:${version} ${{ env.REGISTRY }}/${{ github.repository_owner }}/kube-copilot:py
+            docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/kube-copilot:py
+          fi

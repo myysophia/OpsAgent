@@ -1,0 +1,136 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kube-copilot-secret
+  namespace: kube-copilot
+type: Opaque
+data:
+  jwt-key: base64_encoded_jwt_key_here
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kube-copilot
+  namespace: kube-copilot
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kube-copilot
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "nodes", "namespaces", "configmaps", "secrets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets", "daemonsets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["batch"]
+  resources: ["jobs", "cronjobs"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kube-copilot
+subjects:
+- kind: ServiceAccount
+  name: kube-copilot
+  namespace: kube-copilot
+roleRef:
+  kind: ClusterRole
+  name: kube-copilot
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kube-copilot
+  namespace: kube-copilot
+  labels:
+    app: kube-copilot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kube-copilot
+  template:
+    metadata:
+      labels:
+        app: kube-copilot
+    spec:
+      serviceAccountName: kube-copilot
+      containers:
+      - name: kube-copilot
+        image: ghcr.io/YOUR_USERNAME/kube-copilot:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+        args:
+        - server
+        - --port=8080
+        - --jwt-key=$(JWT_KEY)
+        env:
+        - name: JWT_KEY
+          valueFrom:
+            secretKeyRef:
+              name: kube-copilot-secret
+              key: jwt-key
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /version
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /version
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kube-copilot
+  namespace: kube-copilot
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: http
+    protocol: TCP
+    name: http
+  selector:
+    app: kube-copilot
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kube-copilot
+  namespace: kube-copilot
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: copilot.example.com  # 替换为您的域名
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: kube-copilot
+            port:
+              name: http 

@@ -1,0 +1,20 @@
+# JWT 配置
+jwt:
+  key: "your-secret-key-please-change-in-production"
+  expire: 12h  # token 过期时间
+
+# 服务器配置
+server:
+  port: 8080
+  host: "0.0.0.0"
+
+# 日志配置
+log:
+  level: "info"
+  format: "json"
+  output: "stdout"
+
+# 性能统计配置
+perf:
+  enabled: true
+  reset_interval: 24h 
