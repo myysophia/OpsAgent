@@ -1,9 +1,6 @@
 module github.com/myysophia/OpsAgent
 
 go 1.24.0
-
-toolchain go1.24.1
-
 require (
 	github.com/charmbracelet/glamour v0.8.0
 	github.com/fatih/color v1.18.0
@@ -20,7 +17,7 @@ require (
 	google.golang.org/api v0.225.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/apimachinery v0.32.2
+	k8s.io/apimachinery v0.32.3
 	k8s.io/client-go v0.32.2
 )
 
