@@ -337,10 +337,6 @@ func AssistantWithConfig(model string, prompts []openai.ChatCompletionMessage, m
 	//	}
 	//}()
 
-	if verbose {
-		logger.Debug("开始第一轮对话")
-	}
-
 	// 开始第一轮对话计时
 	perfStats.StartTimer("assistant_first_chat")
 
@@ -408,18 +404,12 @@ func AssistantWithConfig(model string, prompts []openai.ChatCompletionMessage, m
 		iterations++
 		// 记录每次迭代的思考过程
 		if verbose {
-			logger.Info("LLM思考过程",
+			logger.Debug("LLM思考过程",
 				zap.Int("iteration", iterations),
 				zap.String("thought", toolPrompt.Thought),
 				zap.String("question", toolPrompt.Question),
 				zap.Any("action", toolPrompt.Action),
 				zap.String("observation", toolPrompt.Observation),
-			)
-		}
-
-		if verbose {
-			logger.Debug("思考过程",
-				zap.String("thought", toolPrompt.Thought),
 			)
 		}
 
@@ -435,11 +425,6 @@ func AssistantWithConfig(model string, prompts []openai.ChatCompletionMessage, m
 			logger.Info("获得最终答案",
 				zap.String("finalAnswer", toolPrompt.FinalAnswer),
 			)
-			if verbose {
-				logger.Debug("最终答案",
-					zap.String("finalAnswer", toolPrompt.FinalAnswer),
-				)
-			}
 			return toolPrompt.FinalAnswer, chatHistory, nil
 		}
 
