@@ -19,7 +19,7 @@ func init() {
 }
 
 const (
-	defaultMaxIterations = 10
+	defaultMaxIterations = 5
 )
 
 // Assistant is the simplest AI assistant.
@@ -348,9 +348,6 @@ func AssistantWithConfig(model string, prompts []openai.ChatCompletionMessage, m
 		zap.Duration("duration", chatDuration),
 		zap.String("response", resp),
 	)
-
-	// 开始JSON清理计时
-
 	if err != nil {
 		logger.Error("对话完成失败",
 			zap.Error(err),
@@ -362,12 +359,6 @@ func AssistantWithConfig(model string, prompts []openai.ChatCompletionMessage, m
 		Role:    openai.ChatMessageRoleAssistant,
 		Content: string(resp),
 	})
-
-	if verbose {
-		logger.Debug("LLM 初始响应",
-			zap.String("response", resp),
-		)
-	}
 
 	// 开始解析工具提示计时
 	perfStats.StartTimer("assistant_parse_tool_prompt")
@@ -420,8 +411,7 @@ func AssistantWithConfig(model string, prompts []openai.ChatCompletionMessage, m
 			return toolPrompt.FinalAnswer, chatHistory, nil
 		}
 
-		// 检查final_answer是否为有效值（不是模板或占位符）
-		if toolPrompt.FinalAnswer != "" && !isTemplateValue(toolPrompt.FinalAnswer) {
+		if toolPrompt.FinalAnswer != "" && !isTemplateValue(toolPrompt.FinalAnswer) && toolPrompt.Observation != "" {
 			logger.Info("获得最终答案",
 				zap.String("finalAnswer", toolPrompt.FinalAnswer),
 			)
@@ -518,13 +508,6 @@ func AssistantWithConfig(model string, prompts []openai.ChatCompletionMessage, m
 			logger.Debug("消息构建完成",
 				zap.Duration("duration", constructDuration),
 			)
-
-			// Start next iteration of LLM chat.
-			if verbose {
-				logger.Debug("开始新一轮对话",
-					zap.Int("iteration", iterations),
-				)
-			}
 
 			// 开始中间对话计时
 			perfStats.StartTimer("assistant_intermediate_chat")

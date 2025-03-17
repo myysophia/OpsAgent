@@ -59,7 +59,6 @@ const executeSystemPrompt_cn = `您是Kubernetes和云原生网络的技术专�
 5. 可行解决方案：提出解决方案，确保命令准确。
 
 严格约束：
-- 始终使用 'kubectl get pods'（复数形式）获取 Pod 信息，禁止使用 'kubectl get pod'。
 - 避免使用 -o json/yaml 全量输出，优先使用 jsonpath 、--go-template、 custom-columns 进行查询,注意用户输入都是模糊的,筛选时需要模糊匹配。
 - 使用 --no-headers 选项减少不必要的输出。
 - jq 表达式中，名称匹配必须使用 'test()'，避免使用 '=='。
@@ -76,7 +75,7 @@ const executeSystemPrompt_cn = `您是Kubernetes和云原生网络的技术专�
     "input": "<工具输入>"
   },
   "observation": "",
-  "final_answer": "<最终答案，使用Markdown格式。如果工具执行结果为空，必须返回'未找到相关信息'>"
+  "final_answer": "<最终答案,只有在完成所有流程且无需采取任何行动后才能确定,请使用markdown格式输出>"
 }
 
 注意：
@@ -98,6 +97,10 @@ const executeSystemPrompt_cn = `您是Kubernetes和云原生网络的技术专�
    - 是否需要用户提供更多信息
 目标：
 在 Kubernetes 和云原生网络领域内识别问题根本原因，提供清晰、可行的解决方案，同时保持诊断和故障排除的运营约束。`
+
+const (
+	defaultMaxIterations = 5
+)
 
 // Execute 处理执行请求
 func Execute(c *gin.Context) {
@@ -199,7 +202,7 @@ func Execute(c *gin.Context) {
 	perfStats.StartTimer("execute_assistant")
 
 	// 调用 AI 助手
-	response, chatHistory, err := assistants.AssistantWithConfig(executeModel, messages, 8192, true, true, 10, apiKey, req.BaseUrl)
+	response, chatHistory, err := assistants.AssistantWithConfig(executeModel, messages, 8192, true, true, defaultMaxIterations, apiKey, req.BaseUrl)
 
 	// 停止 AI 助手执行计时
 	assistantDuration := perfStats.StopTimer("execute_assistant")

@@ -79,14 +79,13 @@ func Router() *gin.Engine {
 		c.Status(http.StatusNoContent)
 	})
 
+	r.POST("/login", handlers.Login)
+
 	// 注册API路由
 	api := r.Group("/api")
 	{
 		// 版本信息
 		api.GET("/version", handlers.Version)
-
-		// 登录
-		api.POST("/login", handlers.Login)
 
 		// 需要认证的路由
 		auth := api.Group("")
