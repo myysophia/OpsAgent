@@ -1,5 +1,5 @@
 # 使用多阶段构建减小最终镜像大小
-FROM golang:1.24-alpine AS builder
+FROM golang:1.22-alpine AS builder
 
 # 安装必要的构建工具
 RUN apk add --no-cache git make
@@ -23,7 +23,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o OpsAgent ./cmd/OpsAgent
 FROM alpine:3.19
 
 # 安装必要的运行时依赖
-RUN apk add --no-cache \
+RUN apk update && apk add --no-cache \
     ca-certificates \
     tzdata \
     kubectl \
@@ -31,17 +31,17 @@ RUN apk add --no-cache \
     jq \
     python3 \
     py3-pip \
-    bash \
-    && pip3 install --no-cache-dir kubernetes \
-    && mkdir -p /app/k8s/python-cli
+    bash
+
+# 安装Python依赖并创建目录
+RUN pip3 install --no-cache-dir kubernetes pyyaml pandas && \
+    mkdir -p /app/k8s/python-cli
 
 # 创建Python虚拟环境
-RUN python3 -m venv /app/k8s/python-cli/k8s-env \
-    && . /app/k8s/python-cli/k8s-env/bin/activate \
-    && pip install --no-cache-dir kubernetes \
-    && pip install --no-cache-dir pyyaml \
-    && pip install --no-cache-dir pandas \
-    && deactivate
+RUN python3 -m venv /app/k8s/python-cli/k8s-env && \
+    . /app/k8s/python-cli/k8s-env/bin/activate && \
+    pip install --no-cache-dir kubernetes pyyaml pandas && \
+    deactivate
 
 # 设置工作目录
 WORKDIR /app
