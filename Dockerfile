@@ -37,7 +37,7 @@ FROM alpine:3.19
 #    musl-dev \
 #    linux-headers
 
-RUN apk update && apk add --no-cache ca-certificates tzdata curl bash python3 py3-pip kubectl jq
+RUN apk update && apk add --no-cache ca-certificates tzdata curl bash python3 pip3 py3-pip kubectl jq
 RUN pip3 install --no-cache-dir --upgrade pip
 RUN pip3 install --no-cache-dir kubernetes pyyaml pandas
 RUN mkdir -p /app/k8s/python-cli
