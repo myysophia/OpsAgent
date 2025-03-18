@@ -1,0 +1,433 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ops-agent
+  labels:
+    app: ops-agent
+    owner: ops-team
+    environment: production
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ops-agent-config
+  namespace: ops-agent
+  labels:
+    app: ops-agent
+    environment: production
+data:
+  config.yaml: |
+    # JWT 配置
+    jwt:
+      key: "${JWT_KEY}"
+      expire: 12h  # token 过期时间
+
+    # 服务器配置
+    server:
+      port: 8080
+      host: "0.0.0.0"
+
+    # 日志配置
+    log:
+      level: "info"
+      format: "json"
+      output: "stdout"
+
+    # 性能统计配置
+    perf:
+      enabled: true
+      reset_interval: 24h
+---
+# 添加kubeconfig Secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kubeconfig-secret
+  namespace: ops-agent
+  labels:
+    app: ops-agent
+    environment: production
+type: Opaque
+data:
+  config: |-
+    # 这里填入base64编码的kubeconfig内容
+    # 请使用以下命令获取并替换：
+    # cat ~/.kube/config | base64 -w 0
+    IyB5b3VyIGt1YmVjb25maWcgZmlsZSBjb250ZW50IGluIGJhc2U2NCBlbmNvZGluZw==
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ops-agent-secret
+  namespace: ops-agent
+  labels:
+    app: ops-agent
+    environment: production
+type: Opaque
+data:
+  jwt-key: MTIzNDU2Cg==
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ops-agent
+  namespace: ops-agent
+  labels:
+    app: ops-agent
+    environment: production
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ops-agent
+  labels:
+    app: ops-agent
+    environment: production
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "nodes", "namespaces", "configmaps", "secrets", "persistentvolumes", "persistentvolumeclaims", "events"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["batch"]
+  resources: ["jobs", "cronjobs"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses", "networkpolicies"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["storage.k8s.io"]
+  resources: ["storageclasses"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["policy"]
+  resources: ["podsecuritypolicies"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["autoscaling"]
+  resources: ["horizontalpodautoscalers"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ops-agent
+  labels:
+    app: ops-agent
+    environment: production
+subjects:
+- kind: ServiceAccount
+  name: ops-agent
+  namespace: ops-agent
+roleRef:
+  kind: ClusterRole
+  name: ops-agent
+  apiGroup: rbac.authorization.k8s.io
+---
+# 定义PodDisruptionBudget以确保高可用性
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ops-agent-pdb
+  namespace: ops-agent
+  labels:
+    app: ops-agent
+    environment: production
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: ops-agent
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ops-agent
+  namespace: ops-agent
+  labels:
+    app: ops-agent
+    component: api
+    environment: production
+  annotations:
+    description: "OpsAgent - 基于LLM的Kubernetes智能运维平台"
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: ops-agent
+  template:
+    metadata:
+      labels:
+        app: ops-agent
+        environment: production
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: ops-agent
+      terminationGracePeriodSeconds: 60
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:  # 强制要求pod分布在不同节点
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - ops-agent
+            topologyKey: kubernetes.io/hostname
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+              - key: node-role.kubernetes.io/worker
+                operator: Exists
+      securityContext:
+        fsGroup: 1000
+        runAsUser: 1000
+        runAsNonRoot: true
+      containers:
+      - name: ops-agent
+        image: ninesun0318/opsagent:main
+        imagePullPolicy: Always
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          capabilities:
+            drop:
+            - ALL
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        args:
+        - server
+        - --port=8080
+        - --config=/app/configs/config.yaml
+        env:
+        - name: JWT_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ops-agent-secret
+              key: jwt-key
+        - name: TZ
+          value: "Asia/Shanghai"
+        - name: PYTHONPATH
+          value: /app/k8s/python-cli/k8s-env/lib/python3.9/site-packages
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: KUBECONFIG
+          value: /root/.kube/config
+        volumeMounts:
+        - name: config-volume
+          mountPath: /app/configs
+        - name: kubeconfig-volume
+          mountPath: /root/.kube
+          readOnly: true
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+          limits:
+            cpu: 2000m
+            memory: 2Gi
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /api/health
+            port: http
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/bin/sh", "-c", "sleep 5"]
+      volumes:
+      - name: config-volume
+        configMap:
+          name: ops-agent-config
+      - name: kubeconfig-volume
+        secret:
+          secretName: kubeconfig-secret
+          items:
+          - key: config
+            path: config
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app: ops-agent
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ops-agent
+  namespace: ops-agent
+  labels:
+    app: ops-agent
+    environment: production
+  annotations:
+    description: "OpsAgent服务入口"
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: http
+    protocol: TCP
+    name: http
+  selector:
+    app: ops-agent
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ops-agent
+  namespace: ops-agent
+  labels:
+    app: ops-agent
+    environment: production
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Real-IP $remote_addr;
+    # 限制只允许特定IP访问
+    nginx.ingress.kubernetes.io/whitelist-source-range: "192.168.1.1/32,10.10.10.0/24"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - ops-agent.example.com
+    secretName: ops-agent-tls
+  rules:
+  - host: XXX  # 请替换为您的实际域名
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: ops-agent
+            port:
+              name: http
+# ---
+# # 添加一个HorizontalPodAutoscaler以便根据CPU使用率自动扩缩容
+# apiVersion: autoscaling/v2
+# kind: HorizontalPodAutoscaler
+# metadata:
+#   name: ops-agent
+#   namespace: ops-agent
+#   labels:
+#     app: ops-agent
+#     environment: production
+# spec:
+#   scaleTargetRef:
+#     apiVersion: apps/v1
+#     kind: Deployment
+#     name: ops-agent
+#   minReplicas: 2
+#   maxReplicas: 10
+#   metrics:
+#   - type: Resource
+#     resource:
+#       name: cpu
+#       target:
+#         type: Utilization
+#         averageUtilization: 70
+#   - type: Resource
+#     resource:
+#       name: memory
+#       target:
+#         type: Utilization
+#         averageUtilization: 80
+#   behavior:
+#     scaleDown:
+#       stabilizationWindowSeconds: 300
+#       policies:
+#       - type: Percent
+#         value: 25
+#         periodSeconds: 60
+#     scaleUp:
+#       stabilizationWindowSeconds: 0
+#       policies:
+#       - type: Percent
+#         value: 100
+#         periodSeconds: 60
+# ---
+# # 添加NetworkPolicy限制网络访问
+# apiVersion: networking.k8s.io/v1
+# kind: NetworkPolicy
+# metadata:
+#   name: ops-agent-network-policy
+#   namespace: ops-agent
+#   labels:
+#     app: ops-agent
+#     environment: production
+# spec:
+#   podSelector:
+#     matchLabels:
+#       app: ops-agent
+#   policyTypes:
+#   - Ingress
+#   - Egress
+#   ingress:
+#   - from:
+#     - namespaceSelector:
+#         matchLabels:
+#           kubernetes.io/metadata.name: kube-system
+#     - namespaceSelector:
+#         matchLabels:
+#           kubernetes.io/metadata.name: ingress-nginx
+#     ports:
+#     - protocol: TCP
+#       port: 8080
+#   egress:
+#   - to:
+#     - ipBlock:
+#         cidr: 0.0.0.0/0
+#         except:
+#         - 10.0.0.0/8
+#         - 172.16.0.0/12
+#         - 192.168.0.0/16
+#     ports:
+#     - protocol: TCP
+#       port: 443 
