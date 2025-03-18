@@ -23,19 +23,24 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o OpsAgent ./cmd/OpsAgent
 FROM alpine:3.19
 
 # 安装必要的运行时依赖和编译工具
-RUN apk update && apk add --no-cache \
-    ca-certificates \
-    tzdata \
-    kubectl \
-    curl \
-    jq \
-    python3 \
-    py3-pip \
-    bash \
-    gcc \
-    python3-dev \
-    musl-dev \
-    linux-headers
+#RUN apk update && apk add --no-cache \
+#    ca-certificates \
+#    tzdata \
+#    kubectl \
+#    curl \
+#    jq \
+#    python3 \
+#    py3-pip \
+#    bash \
+#    gcc \
+#    python3-dev \
+#    musl-dev \
+#    linux-headers
+
+RUN apk update && apk add --no-cache ca-certificates tzdata curl bash python3 py3-pip kubectl jq
+RUN pip3 install --no-cache-dir --upgrade pip
+RUN pip3 install --no-cache-dir kubernetes pyyaml pandas
+RUN mkdir -p /app/k8s/python-cli
 
 # 安装Python依赖并创建目录
 RUN pip3 install --no-cache-dir --upgrade pip && \
