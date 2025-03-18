@@ -1,5 +1,5 @@
 # 使用多阶段构建减小最终镜像大小
-FROM ninesun/golang:1.24-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 # 安装必要的构建工具
 RUN apk add --no-cache git make
@@ -20,7 +20,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o OpsAgent ./cmd/OpsAgent
 
 # 使用轻量级基础镜像
-FROM ninesun/alpine:3.19
+FROM alpine:3.19
 
 # 安装必要的运行时依赖和编译工具
 RUN apk update && apk add --no-cache \
