@@ -15,7 +15,8 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60  # 增加超时时间
+
     permissions:
       contents: read
       packages: write
@@ -23,6 +24,23 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+
+      # 添加 Go 缓存
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24'
+          cache: true
+
+      # 预下载依赖
+      - name: Download Go modules
+        run: |
+          go mod download
+        env:
+          GOPROXY: "https://goproxy.io,https://proxy.golang.org,https://goproxy.cn,direct"
+          GO111MODULE: "on"
+          GOSUMDB: "off"
+        continue-on-error: true  # 允许失败并继续
 
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v2

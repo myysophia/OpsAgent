@@ -3,12 +3,16 @@ FROM golang:1.24-alpine AS builder
 
 # 添加代理设置和必要的构建工具
 RUN apk add --no-cache git make
-# 设置 GOPROXY 环境变量以解决下载问题
-ENV GOPROXY=https://goproxy.cn,direct
+# 设置多个 GOPROXY 源以提高可靠性
+ENV GOPROXY=https://goproxy.io,https://proxy.golang.org,https://goproxy.cn,direct
+ENV GO111MODULE=on
+ENV GOSUMDB=off
 
 WORKDIR /app
 COPY go.mod go.sum ./
-RUN go mod download
+# 增加重试机制和超时设置
+RUN for i in 1 2 3 4 5; do go mod download && break || sleep 10; done
+
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o OpsAgent ./cmd/kube-copilot
 
@@ -44,7 +48,7 @@ COPY --from=builder /app/OpsAgent .
 
 ENV GIN_MODE=release
 ENV PYTHONPATH=/app/k8s/python-cli/k8s-env/lib/python3.*/site-packages
-ENV GOPROXY=https://proxy.golang.org,direct
+
 EXPOSE 8080
 ENTRYPOINT ["./OpsAgent"]
 CMD ["server", "--port", "8080"]
