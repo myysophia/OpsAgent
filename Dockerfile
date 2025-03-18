@@ -17,7 +17,7 @@ RUN go mod download
 COPY . .
 
 # 构建应用
-RUN CGO_ENABLED=0 GOOS=linux go build -o kube-copilot ./cmd/kube-copilot
+RUN CGO_ENABLED=0 GOOS=linux go build -o OpsAgent ./cmd/OpsAgent
 
 # 使用轻量级基础镜像
 FROM alpine:3.19
@@ -31,25 +31,34 @@ RUN apk add --no-cache \
     jq \
     python3 \
     py3-pip \
-    gcc \
-    python3-dev \
-    musl-dev \
-    linux-headers \
+    bash \
     && pip3 install --no-cache-dir kubernetes \
-    && apk del gcc python3-dev musl-dev linux-headers
+    && mkdir -p /app/k8s/python-cli
+
+# 创建Python虚拟环境
+RUN python3 -m venv /app/k8s/python-cli/k8s-env \
+    && . /app/k8s/python-cli/k8s-env/bin/activate \
+    && pip install --no-cache-dir kubernetes \
+    && pip install --no-cache-dir pyyaml \
+    && pip install --no-cache-dir pandas \
+    && deactivate
 
 # 设置工作目录
 WORKDIR /app
 
 # 从builder阶段复制二进制文件
-COPY --from=builder /app/kube-copilot .
+COPY --from=builder /app/OpsAgent .
+
+# 创建软链接，确保环境路径一致
+RUN ln -s /app/k8s /root/k8s
 
 # 设置环境变量
 ENV GIN_MODE=release
+ENV PYTHONPATH=/app/k8s/python-cli/k8s-env/lib/python3.*/site-packages
 
 # 暴露端口
 EXPOSE 8080
 
 # 启动命令
-ENTRYPOINT ["./kube-copilot"]
+ENTRYPOINT ["./OpsAgent"]
 CMD ["server", "--port", "8080"]
