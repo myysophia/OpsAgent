@@ -59,3 +59,5 @@ jobs:
           no-cache: ${{ github.event_name == 'pull_request' }}
           build-args: |
             BUILDKIT_INLINE_CACHE=1
+          retries: 3  # 重试 3 次
+          retry-delay: 5  # 每次重试间隔 5 秒
