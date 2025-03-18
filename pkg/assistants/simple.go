@@ -604,6 +604,12 @@ func AssistantWithConfig(model string, prompts []openai.ChatCompletionMessage, m
 				logger.Debug("解析中间响应成功",
 					zap.Duration("duration", parseIntermediateDuration),
 				)
+				if toolPrompt.FinalAnswer != "" {
+					logger.Info("获得最终答案",
+						zap.String("finalAnswer", toolPrompt.FinalAnswer),
+					)
+					return toolPrompt.FinalAnswer, chatHistory, nil
+				}
 			}
 		}
 	}
