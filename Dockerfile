@@ -1,5 +1,5 @@
 # 使用多阶段构建减小最终镜像大小
-FROM golang:1.24-alpine AS builder
+FROM ninesun/golang:1.24-alpine AS builder
 
 # 安装必要的构建工具
 RUN apk add --no-cache git make
@@ -20,9 +20,9 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o OpsAgent ./cmd/OpsAgent
 
 # 使用轻量级基础镜像
-FROM alpine:3.19
+FROM ninesun/alpine:3.19
 
-# 安装必要的运行时依赖
+# 安装必要的运行时依赖和编译工具
 RUN apk update && apk add --no-cache \
     ca-certificates \
     tzdata \
@@ -31,15 +31,22 @@ RUN apk update && apk add --no-cache \
     jq \
     python3 \
     py3-pip \
-    bash
+    bash \
+    gcc \
+    python3-dev \
+    musl-dev \
+    linux-headers
 
 # 安装Python依赖并创建目录
-RUN pip3 install --no-cache-dir kubernetes pyyaml pandas && \
-    mkdir -p /app/k8s/python-cli
+RUN pip3 install --no-cache-dir --upgrade pip && \
+    pip3 install --no-cache-dir kubernetes pyyaml pandas && \
+    mkdir -p /app/k8s/python-cli && \
+    apk del gcc python3-dev musl-dev linux-headers
 
 # 创建Python虚拟环境
 RUN python3 -m venv /app/k8s/python-cli/k8s-env && \
     . /app/k8s/python-cli/k8s-env/bin/activate && \
+    pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir kubernetes pyyaml pandas && \
     deactivate
 
