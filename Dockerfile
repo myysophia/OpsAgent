@@ -44,7 +44,7 @@ COPY --from=builder /app/OpsAgent .
 
 ENV GIN_MODE=release
 ENV PYTHONPATH=/app/k8s/python-cli/k8s-env/lib/python3.*/site-packages
-
+ENV GOPROXY=https://proxy.golang.org,direct
 EXPOSE 8080
 ENTRYPOINT ["./OpsAgent"]
 CMD ["server", "--port", "8080"]
