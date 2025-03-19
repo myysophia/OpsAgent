@@ -88,23 +88,26 @@ kubectl -n ops-agent logs <pod-name>
 
 ### 日志目录权限问题
 
-如果遇到类似 `"error": "创建日志目录失败: mkdir logs: permission denied"` 的错误，请检查：
+如果遇到日志相关的问题，可以检查以下几点：
 
-1. 确保部署配置中有 initContainer 来设置日志目录权限：
-```bash
-kubectl -n ops-agent get pod <pod-name> -o yaml | grep -A 10 initContainers
-```
-
-2. 查看日志目录权限：
+1. 查看日志目录是否存在并有正确权限：
 ```bash
 kubectl -n ops-agent exec <pod-name> -- ls -la /app/logs
 ```
 
-3. 手动修复权限（紧急情况下使用）：
+2. 检查环境变量是否正确设置：
 ```bash
-kubectl -n ops-agent exec <pod-name> -- mkdir -p /app/logs
-kubectl -n ops-agent exec <pod-name> -- chmod 755 /app/logs
+kubectl -n ops-agent exec <pod-name> -- env | grep LOG_PATH
 ```
+
+3. 如果使用的是自定义镜像，确保镜像中已经包含了日志目录：
+```bash
+# 确认镜像设置了正确的日志目录和权限
+docker inspect ninesun0318/opsagent:main | grep -A 10 "Volumes"
+docker inspect ninesun0318/opsagent:main | grep -A 10 "User"
+```
+
+> 注意：我们已经在 Dockerfile 中正确设置了日志目录权限，镜像构建时会自动创建 `/app/logs` 目录并设置适当权限。
 
 ### 无法访问服务
 
@@ -150,16 +153,21 @@ kubectl -n ops-agent describe hpa ops-agent
 - `TZ` - 时区设置，默认为 Asia/Shanghai
 - `PYTHONPATH` - Python 包路径，确保Python工具正常运行
 - `KUBECONFIG` - kubeconfig 文件路径，用于容器内执行 kubectl 命令
-- `LOG_PATH` - 日志存储路径，默认设置为 `/app/logs`
 - `ENV` - 环境标识，用于区分不同环境
 
 ### 日志目录配置
 
-为了解决在非root用户下运行时的权限问题，我们：
+为了解决在非root用户下运行时的权限问题，我们在 Dockerfile 中:
 
-1. 使用 initContainer 预先创建日志目录并设置正确权限
-2. 使用 emptyDir 卷来存储应用日志
-3. 通过环境变量 `LOG_PATH` 告知应用使用指定的日志路径
+1. 创建所需目录结构：`mkdir -p /app/logs`
+2. 设置正确的所有权：`chown -R 1000:1000 /app/logs`
+3. 设置适当的权限：`chmod 755 /app/logs`
+4. 设置 `LOG_PATH` 环境变量指向 `/app/logs`
+5. 使用 `USER 1000` 指令确保容器以非root用户运行
+
+在 Kubernetes 部署配置中:
+1. 使用 emptyDir 卷挂载到 `/app/logs` 路径
+2. 这样应用程序可以在 pod 生命周期内使用此卷进行日志写入
 
 如果您需要持久化日志，可以将 `emptyDir` 替换为 `persistentVolumeClaim`。
 

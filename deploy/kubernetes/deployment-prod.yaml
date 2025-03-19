@@ -37,23 +37,23 @@ data:
     perf:
       enabled: true
       reset_interval: 24h
----
-# 添加kubeconfig Secret
-apiVersion: v1
-kind: Secret
-metadata:
-  name: kubeconfig-secret
-  namespace: ops-agent
-  labels:
-    app: ops-agent
-    environment: production
-type: Opaque
-data:
-  config: |-
-    # 这里填入base64编码的kubeconfig内容
-    # 请使用以下命令获取并替换：
-    # cat ~/.kube/config | base64 -w 0
-    IyB5b3VyIGt1YmVjb25maWcgZmlsZSBjb250ZW50IGluIGJhc2U2NCBlbmNvZGluZw==
+# ---
+# # 添加kubeconfig Secret
+# apiVersion: v1
+# kind: Secret
+# metadata:
+#   name: kubeconfig-secret
+#   namespace: ops-agent
+#   labels:
+#     app: ops-agent
+#     environment: production
+# type: Opaque
+# data:
+#   config: |-
+#     # 这里填入base64编码的kubeconfig内容
+#     # 请使用以下命令获取并替换：
+#     # cat ~/.kube/config | base64 -w 0
+#     IyB5b3VyIGt1YmVjb25maWcgZmlsZSBjb250ZW50IGluIGJhc2U2NCBlbmNvZGluZw==
 ---
 apiVersion: v1
 kind: Secret
@@ -190,28 +190,10 @@ spec:
               matchExpressions:
               - key: node-role.kubernetes.io/worker
                 operator: Exists
-      securityContext:
-        fsGroup: 1000
-        runAsUser: 1000
-        runAsNonRoot: true
-      initContainers:
-      - name: init-permissions
-        image: busybox:1.36
-        command: ['sh', '-c', 'mkdir -p /app/logs && chown -R 1000:1000 /app/logs && chmod -R 755 /app/logs']
-        volumeMounts:
-        - name: logs-volume
-          mountPath: /app/logs
       containers:
       - name: ops-agent
         image: ninesun0318/opsagent:main
         imagePullPolicy: Always
-        securityContext:
-          allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: false
-          runAsNonRoot: true
-          capabilities:
-            drop:
-            - ALL
         ports:
         - containerPort: 8080
           name: http
@@ -240,14 +222,11 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBECONFIG
           value: /root/.kube/config
-        - name: LOG_PATH
-          value: /app/logs
         volumeMounts:
         - name: config-volume
           mountPath: /app/configs
         - name: kubeconfig-volume
           mountPath: /root/.kube
-          readOnly: true
         - name: logs-volume
           mountPath: /app/logs
         resources:
@@ -324,123 +303,3 @@ spec:
     name: http
   selector:
     app: ops-agent
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: ops-agent
-  namespace: ops-agent
-  labels:
-    app: ops-agent
-    environment: production
-  annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
-    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
-    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-      proxy_set_header X-Real-IP $remote_addr;
-    # 限制只允许特定IP访问
-    nginx.ingress.kubernetes.io/whitelist-source-range: "192.168.1.1/32,10.10.10.0/24"
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
-spec:
-  ingressClassName: nginx
-  tls:
-  - hosts:
-    - ops-agent.example.com
-    secretName: ops-agent-tls
-  rules:
-  - host: XXX  # 请替换为您的实际域名
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: ops-agent
-            port:
-              name: http
-# ---
-# # 添加一个HorizontalPodAutoscaler以便根据CPU使用率自动扩缩容
-# apiVersion: autoscaling/v2
-# kind: HorizontalPodAutoscaler
-# metadata:
-#   name: ops-agent
-#   namespace: ops-agent
-#   labels:
-#     app: ops-agent
-#     environment: production
-# spec:
-#   scaleTargetRef:
-#     apiVersion: apps/v1
-#     kind: Deployment
-#     name: ops-agent
-#   minReplicas: 2
-#   maxReplicas: 10
-#   metrics:
-#   - type: Resource
-#     resource:
-#       name: cpu
-#       target:
-#         type: Utilization
-#         averageUtilization: 70
-#   - type: Resource
-#     resource:
-#       name: memory
-#       target:
-#         type: Utilization
-#         averageUtilization: 80
-#   behavior:
-#     scaleDown:
-#       stabilizationWindowSeconds: 300
-#       policies:
-#       - type: Percent
-#         value: 25
-#         periodSeconds: 60
-#     scaleUp:
-#       stabilizationWindowSeconds: 0
-#       policies:
-#       - type: Percent
-#         value: 100
-#         periodSeconds: 60
-# ---
-# # 添加NetworkPolicy限制网络访问
-# apiVersion: networking.k8s.io/v1
-# kind: NetworkPolicy
-# metadata:
-#   name: ops-agent-network-policy
-#   namespace: ops-agent
-#   labels:
-#     app: ops-agent
-#     environment: production
-# spec:
-#   podSelector:
-#     matchLabels:
-#       app: ops-agent
-#   policyTypes:
-#   - Ingress
-#   - Egress
-#   ingress:
-#   - from:
-#     - namespaceSelector:
-#         matchLabels:
-#           kubernetes.io/metadata.name: kube-system
-#     - namespaceSelector:
-#         matchLabels:
-#           kubernetes.io/metadata.name: ingress-nginx
-#     ports:
-#     - protocol: TCP
-#       port: 8080
-#   egress:
-#   - to:
-#     - ipBlock:
-#         cidr: 0.0.0.0/0
-#         except:
-#         - 10.0.0.0/8
-#         - 172.16.0.0/12
-#         - 192.168.0.0/16
-#     ports:
-#     - protocol: TCP
-#       port: 443 

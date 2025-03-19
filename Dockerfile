@@ -43,12 +43,24 @@ RUN rm -rf /var/cache/apk/*
 # 创建软链接，确保环境路径一致
 RUN ln -s /app/k8s /root/k8s
 
+# 创建应用所需目录结构并设置权限
+RUN mkdir -p /app/logs && \
+    mkdir -p /app/configs && \
+    mkdir -p /root/.kube && \
+    chmod 755 /app/logs && \
+    chown -R 1000:1000 /app/logs /app/configs /root/.kube
+
 WORKDIR /app
 COPY --from=builder /app/OpsAgent .
 
+# 设置环境变量
 ENV GIN_MODE=release
 ENV PYTHONPATH=/app/k8s/python-cli/k8s-env/lib/python3.*/site-packages
+ENV LOG_PATH=/app/logs
+
+# 设置用户
+USER 1000
 
 EXPOSE 8080
 ENTRYPOINT ["./OpsAgent"]
-CMD ["server", "--port", "8080"]
+CMD ["server", "--port", "8080", "--jwt-key", "123456"]
