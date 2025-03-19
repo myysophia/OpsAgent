@@ -201,7 +201,7 @@ spec:
         args:
         - server
         - --port=8080
-        - --config=/app/configs/config.yaml
+        - --jwt-key="123456"
         env:
         - name: JWT_KEY
           valueFrom:
@@ -236,34 +236,6 @@ spec:
           limits:
             cpu: 2000m
             memory: 2Gi
-        livenessProbe:
-          httpGet:
-            path: /api/health
-            port: http
-          initialDelaySeconds: 10
-          periodSeconds: 15
-          timeoutSeconds: 5
-          failureThreshold: 3
-        readinessProbe:
-          httpGet:
-            path: /api/health
-            port: http
-          initialDelaySeconds: 10
-          periodSeconds: 15
-          timeoutSeconds: 5
-          failureThreshold: 3
-        startupProbe:
-          httpGet:
-            path: /api/health
-            port: http
-          initialDelaySeconds: 20
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 6
-        lifecycle:
-          preStop:
-            exec:
-              command: ["/bin/sh", "-c", "sleep 5"]
       volumes:
       - name: config-volume
         configMap:
