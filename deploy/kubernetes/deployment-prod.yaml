@@ -194,6 +194,13 @@ spec:
         fsGroup: 1000
         runAsUser: 1000
         runAsNonRoot: true
+      initContainers:
+      - name: init-permissions
+        image: busybox:1.36
+        command: ['sh', '-c', 'mkdir -p /app/logs && chown -R 1000:1000 /app/logs && chmod -R 755 /app/logs']
+        volumeMounts:
+        - name: logs-volume
+          mountPath: /app/logs
       containers:
       - name: ops-agent
         image: ninesun0318/opsagent:main
@@ -233,12 +240,16 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBECONFIG
           value: /root/.kube/config
+        - name: LOG_PATH
+          value: /app/logs
         volumeMounts:
         - name: config-volume
           mountPath: /app/configs
         - name: kubeconfig-volume
           mountPath: /root/.kube
           readOnly: true
+        - name: logs-volume
+          mountPath: /app/logs
         resources:
           requests:
             cpu: 500m
@@ -284,6 +295,8 @@ spec:
           items:
           - key: config
             path: config
+      - name: logs-volume
+        emptyDir: {}
       topologySpreadConstraints:
       - maxSkew: 1
         topologyKey: kubernetes.io/hostname
