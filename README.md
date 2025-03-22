@@ -3,6 +3,8 @@
 ## 1. 项目概述
 
 OpsAgent 是一个基于 LLM (Large Language Model) 的 Kubernetes 集群管理工具，它通过 AI 能力来简化和增强 Kubernetes 的操作和管理。该项目旨在帮助用户更容易地进行集群诊断、安全审计、资源分析和清单生成等操作。
+![image](https://github.com/user-attachments/assets/90035533-4c16-4dee-857f-9ee091ac4e08)
+
 
 ## 2. 技术栈
 
