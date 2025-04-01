@@ -168,3 +168,4 @@ logs
 
 .cursorignore
 .cursor/
+.history/
