@@ -17,9 +17,9 @@ var (
 
 	// rootCmd represents the base command when called without any subcommands
 	rootCmd = &cobra.Command{
-		Use:     "k8s-aiagent",
+		Use:     "OpsAgent",
 		Version: VERSION,
-		Short:   "Kubernetes Copilot - An AI agent for Kubernetes",
+		Short:   "OpsAgent Copilot - An AI agent for devops",
 	}
 )
 

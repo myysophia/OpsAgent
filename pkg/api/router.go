@@ -103,6 +103,9 @@ func Router() *gin.Engine {
 			// 性能统计
 			auth.GET("/perf/stats", handlers.PerfStats)
 			auth.POST("/perf/reset", handlers.ResetPerfStats)
+
+			// RAG上下文切换
+			auth.POST("/v1/switch-context", handlers.SwitchContext)
 		}
 	}
 
