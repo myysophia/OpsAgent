@@ -3,11 +3,12 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 	"github.com/sashabaranov/go-openai"
 	"go.uber.org/zap"
-	"net/http"
-	"strings"
 
 	"github.com/myysophia/OpsAgent/pkg/assistants"
 	"github.com/myysophia/OpsAgent/pkg/utils"
@@ -167,7 +168,7 @@ func Execute(c *gin.Context) {
 	// 确定使用的模型
 	executeModel := req.CurrentModel
 	if executeModel == "" {
-		executeModel = "gpt-4"
+		executeModel = "gpt-4o"
 	}
 
 	// 构建执行指令
