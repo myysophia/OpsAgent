@@ -123,3 +123,10 @@ sequenceDiagram
 2. 监控上下文切换的成功率
 3. 记录RAG API的响应时间
 4. 错误追踪和告警 
+
+## 9. 部署
+启动时需要注意需要有以下两个env
+```bash
+	ragAPIKey := os.Getenv("RAG_API_KEY")
+	ragAppID := os.Getenv("RAG_APP_ID")
+```
