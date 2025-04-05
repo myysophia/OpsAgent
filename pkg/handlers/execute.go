@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -66,6 +68,7 @@ const executeSystemPrompt_cn = `您是Kubernetes和云原生网络的技术专�
 - 命令参数涉及特殊字符（如 []、()、"）时，优先使用单引号 ' 包裹，避免 Shell 解析错误。
 - 避免在 zsh 中使用未转义的双引号（如 \"），防止触发模式匹配。
 - 当使用awk时使用单引号（如 '{print $1}'），避免双引号转义导致语法错误。
+- 使用kubectl工具时 不要使用-n或者--namespace参数,因为rag中已经选择好了集群和namespace,模糊匹配用户提供的服务名称是必须的.
 
 重要提示：始终使用以下 JSON 格式返回响应：
 {
@@ -102,6 +105,56 @@ const executeSystemPrompt_cn = `您是Kubernetes和云原生网络的技术专�
 const (
 	defaultMaxIterations = 5
 )
+
+// switchContext 调用RAG接口切换context
+func switchContext(query string) error {
+	// 获取 logger
+	logger := utils.GetLogger()
+	// 获取性能统计工具
+	perfStats := utils.GetPerfStats()
+	// 开始整体执行计时
+	defer perfStats.TraceFunc("switchContext_total")()
+
+	// 构建请求体
+	reqBody := map[string]interface{}{
+		"query":      query,
+		"parameters": map[string]interface{}{},
+	}
+
+	jsonData, err := json.Marshal(reqBody)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	// 发送请求
+	resp, err := http.Post("http://localhost:8080/api/v1/switch-context", "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// 读取响应
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read response: %w", err)
+	}
+
+	// 解析响应
+	var result struct {
+		Code    int         `json:"code"`
+		Message string      `json:"message"`
+		Data    interface{} `json:"data"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
+	if result.Code != 200 {
+		return fmt.Errorf("switch context failed: %s", result.Message)
+	}
+	logger.Debug("Context switched successfully", zap.String("response", string(body)))
+	return nil
+}
 
 // Execute 处理执行请求
 func Execute(c *gin.Context) {
@@ -164,6 +217,25 @@ func Execute(c *gin.Context) {
 		zap.String("cluster", req.Cluster),
 		zap.String("apiKey", "***"),
 	)
+
+	// 切换context
+	err := switchContext(req.Args)
+	if err != nil {
+		logger.Error("RAG Flow 服务异常!", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":  fmt.Sprintf("RAG Flow 服务异常! %v", err),
+			"status": "error",
+			"message": fmt.Sprintf("无法获取你要查询的集群是哪一个？您可以这样问：\n\n"+
+				"中国节点%s\n"+
+				"储能中国节点%s\n"+
+				"欧洲节点%s\n"+
+				"储能欧洲节点%s\n"+
+				".......\n"+
+				"您是想查询哪个节点的信息呢？",
+				req.Args, req.Args, req.Args, req.Args),
+		})
+		return
+	}
 
 	// 确定使用的模型
 	executeModel := req.CurrentModel

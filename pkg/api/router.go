@@ -80,7 +80,7 @@ func Router() *gin.Engine {
 	})
 
 	r.POST("/login", handlers.Login)
-
+	r.POST("/api/v1/switch-context", handlers.SwitchContext)
 	// 注册API路由
 	api := r.Group("/api")
 	{
@@ -104,8 +104,6 @@ func Router() *gin.Engine {
 			auth.GET("/perf/stats", handlers.PerfStats)
 			auth.POST("/perf/reset", handlers.ResetPerfStats)
 
-			// RAG上下文切换
-			auth.POST("/v1/switch-context", handlers.SwitchContext)
 		}
 	}
 

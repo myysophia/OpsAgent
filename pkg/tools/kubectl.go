@@ -2,11 +2,12 @@ package tools
 
 import (
 	"fmt"
-	"go.uber.org/zap"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/myysophia/OpsAgent/pkg/utils"
 )
