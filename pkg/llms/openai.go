@@ -17,7 +17,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"math"
+	"net/http"
 	"regexp"
 	"strings"
 	"time"
@@ -53,6 +55,13 @@ func NewOpenAIClient(apiKey string, baseURL string) (*OpenAIClient, error) {
 				return regexp.MustCompile(`[.:]`).ReplaceAllString(model, "")
 			}
 		}
+
+		// 为Qwen模型添加流式处理的请求头
+		if strings.Contains(baseURL, "dashscope") {
+			config.HTTPClient = &http.Client{
+				Transport: &QwenTransport{},
+			}
+		}
 	}
 
 	return &OpenAIClient{
@@ -60,6 +69,20 @@ func NewOpenAIClient(apiKey string, baseURL string) (*OpenAIClient, error) {
 		Backoff: time.Second,
 		Client:  openai.NewClientWithConfig(config),
 	}, nil
+}
+
+// QwenTransport 是一个自定义的HTTP传输层，用于为Qwen模型添加流式处理的请求头
+type QwenTransport struct {
+	http.Transport
+}
+
+// RoundTrip 实现http.RoundTripper接口，为请求添加Qwen流式处理的请求头
+func (t *QwenTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	// 为流式请求添加特定的请求头
+	if strings.Contains(req.URL.String(), "dashscope") && req.Header.Get("Accept") == "text/event-stream" {
+		req.Header.Set("X-DashScope-SSE", "enable")
+	}
+	return http.DefaultTransport.RoundTrip(req)
 }
 
 // Chat 执行与 LLM 的对话
@@ -72,6 +95,11 @@ func (c *OpenAIClient) Chat(model string, maxTokens int, prompts []openai.ChatCo
 		MaxTokens:   maxTokens,
 		Temperature: math.SmallestNonzeroFloat32,
 		Messages:    prompts,
+	}
+
+	// 检查是否为Qwen模型，如果是则使用流式API
+	if strings.Contains(strings.ToLower(model), "qwen") {
+		return c.StreamChat(model, maxTokens, prompts)
 	}
 
 	backoff := c.Backoff
@@ -98,6 +126,60 @@ func (c *OpenAIClient) Chat(model string, maxTokens int, prompts []openai.ChatCo
 		}
 
 		return "", err
+	}
+
+	return "", fmt.Errorf("OpenAI request throttled after retrying %d times", c.Retries)
+}
+
+// StreamChat 执行与 LLM 的流式对话
+// - model: 使用的模型名称
+// - maxTokens: 最大 token 数量
+// - prompts: 对话历史
+func (c *OpenAIClient) StreamChat(model string, maxTokens int, prompts []openai.ChatCompletionMessage) (string, error) {
+	req := openai.ChatCompletionRequest{
+		Model:       model,
+		MaxTokens:   maxTokens,
+		Temperature: math.SmallestNonzeroFloat32,
+		Messages:    prompts,
+		Stream:      true,
+	}
+
+	ctx := context.Background()
+	backoff := c.Backoff
+
+	for try := 0; try < c.Retries; try++ {
+		stream, err := c.Client.CreateChatCompletionStream(ctx, req)
+		if err != nil {
+			e := &openai.APIError{}
+			if errors.As(err, &e) {
+				switch e.HTTPStatusCode {
+				case 401:
+					return "", err
+				case 429, 500:
+					time.Sleep(backoff)
+					backoff *= 2
+					continue
+				default:
+					return "", err
+				}
+			}
+			return "", err
+		}
+		defer stream.Close()
+
+		var fullResponse strings.Builder
+		for {
+			response, err := stream.Recv()
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			if err != nil {
+				return "", err
+			}
+			fullResponse.WriteString(response.Choices[0].Delta.Content)
+		}
+
+		return fullResponse.String(), nil
 	}
 
 	return "", fmt.Errorf("OpenAI request throttled after retrying %d times", c.Retries)
