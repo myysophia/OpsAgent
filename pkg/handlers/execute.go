@@ -230,11 +230,9 @@ func Execute(c *gin.Context) {
 			"message": fmt.Sprintf("无法获取你要查询的集群是哪一个？您可以这样问：\n\n"+
 				"中国节点%s\n"+
 				"储能中国节点%s\n"+
-				"欧洲节点%s\n"+
-				"储能欧洲节点%s\n"+
 				".......\n"+
 				"您是想查询哪个节点的信息呢？",
-				req.Args, req.Args, req.Args, req.Args),
+				req.Args, req.Args),
 		})
 		return
 	}
