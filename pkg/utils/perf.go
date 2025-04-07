@@ -66,7 +66,7 @@ func (p *PerfStats) StartTimer(operation string) {
 	defer p.mu.Unlock()
 	p.startTimes[operation] = time.Now()
 	p.timers[operation] = 0
-	
+
 	if p.enableLogging && p.logger != nil {
 		p.logger.Debug("开始计时操作",
 			zap.String("operation", operation),
@@ -83,7 +83,7 @@ func (p *PerfStats) StartTimer(operation string) {
 func (p *PerfStats) StopTimer(operation string) time.Duration {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	
+
 	startTime, exists := p.startTimes[operation]
 	if !exists {
 		if p.enableLogging && p.logger != nil {
@@ -93,27 +93,27 @@ func (p *PerfStats) StopTimer(operation string) time.Duration {
 		}
 		return 0
 	}
-	
+
 	elapsed := time.Since(startTime)
 	delete(p.startTimes, operation)
-	
+
 	if _, exists := p.metrics[operation]; !exists {
 		p.metrics[operation] = []time.Duration{}
 	}
 	p.metrics[operation] = append(p.metrics[operation], elapsed)
-	
+
 	if _, exists := p.timers[operation]; !exists {
 		p.timers[operation] = 0
 	}
 	p.timers[operation] = elapsed
-	
+
 	if p.enableLogging && p.logger != nil {
 		p.logger.Debug("完成计时操作",
 			zap.String("operation", operation),
 			zap.Duration("elapsed", elapsed),
 		)
 	}
-	
+
 	return elapsed
 }
 
@@ -124,12 +124,12 @@ func (p *PerfStats) StopTimer(operation string) time.Duration {
 func (p *PerfStats) RecordMetric(operation string, duration time.Duration) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	
+
 	if _, exists := p.metrics[operation]; !exists {
 		p.metrics[operation] = []time.Duration{}
 	}
 	p.metrics[operation] = append(p.metrics[operation], duration)
-	
+
 	if p.enableLogging && p.logger != nil {
 		p.logger.Debug("记录性能指标",
 			zap.String("operation", operation),
@@ -144,13 +144,13 @@ func (p *PerfStats) RecordMetric(operation string, duration time.Duration) {
 func (p *PerfStats) GetMetrics() map[string][]time.Duration {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-	
+
 	// 创建副本以避免并发问题
 	metrics := make(map[string][]time.Duration)
 	for op, durations := range p.metrics {
 		metrics[op] = append([]time.Duration{}, durations...)
 	}
-	
+
 	return metrics
 }
 
@@ -168,44 +168,44 @@ func (p *PerfStats) GetMetrics() map[string][]time.Duration {
 func (p *PerfStats) GetMetricStats(operation string) (min, max, avg, p95, p99 time.Duration, count int, total time.Duration) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-	
+
 	durations, exists := p.metrics[operation]
 	if !exists || len(durations) == 0 {
 		return 0, 0, 0, 0, 0, 0, 0
 	}
-	
+
 	count = len(durations)
-	
+
 	// 创建副本并排序
 	sortedDurations := make([]time.Duration, count)
 	copy(sortedDurations, durations)
 	sort.Slice(sortedDurations, func(i, j int) bool {
 		return sortedDurations[i] < sortedDurations[j]
 	})
-	
+
 	min = sortedDurations[0]
 	max = sortedDurations[count-1]
-	
+
 	// 计算总和和平均值
 	for _, d := range durations {
 		total += d
 	}
 	avg = total / time.Duration(count)
-	
+
 	// 计算百分位数
 	p95Index := int(float64(count) * 0.95)
 	p99Index := int(float64(count) * 0.99)
-	
+
 	if p95Index >= count {
 		p95Index = count - 1
 	}
 	if p99Index >= count {
 		p99Index = count - 1
 	}
-	
+
 	p95 = sortedDurations[p95Index]
 	p99 = sortedDurations[p99Index]
-	
+
 	return
 }
 
@@ -213,10 +213,10 @@ func (p *PerfStats) GetMetricStats(operation string) (min, max, avg, p95, p99 ti
 func (p *PerfStats) ResetMetrics() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	
+
 	p.metrics = make(map[string][]time.Duration)
 	p.startTimes = make(map[string]time.Time)
-	
+
 	if p.enableLogging && p.logger != nil {
 		p.logger.Info("重置所有性能指标")
 	}
@@ -228,37 +228,37 @@ func (p *PerfStats) ResetMetrics() {
 func (p *PerfStats) PrintStats() string {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-	
+
 	if len(p.metrics) == 0 {
 		return "没有收集到性能指标"
 	}
-	
+
 	var result string
 	result = "性能统计信息:\n"
 	result += "------------------------------------------------------------\n"
-	result += fmt.Sprintf("%-30s %-10s %-10s %-10s %-10s %-10s %-10s\n", 
+	result += fmt.Sprintf("%-30s %-10s %-10s %-10s %-10s %-10s %-10s\n",
 		"操作", "次数", "平均", "最小", "最大", "P95", "P99")
 	result += "------------------------------------------------------------\n"
-	
+
 	// 按操作名称排序
 	operations := make([]string, 0, len(p.metrics))
 	for op := range p.metrics {
 		operations = append(operations, op)
 	}
 	sort.Strings(operations)
-	
+
 	for _, op := range operations {
 		min, max, avg, p95, p99, count, _ := p.GetMetricStats(op)
 		result += fmt.Sprintf("%-30s %-10d %-10s %-10s %-10s %-10s %-10s\n",
-			op, count, 
-			formatDuration(avg), 
-			formatDuration(min), 
-			formatDuration(max), 
-			formatDuration(p95), 
+			op, count,
+			formatDuration(avg),
+			formatDuration(min),
+			formatDuration(max),
+			formatDuration(p95),
 			formatDuration(p99))
 	}
 	result += "------------------------------------------------------------\n"
-	
+
 	return result
 }
 
@@ -298,7 +298,7 @@ func (p *PerfStats) GetStats() map[string]interface{} {
 	defer p.mu.RUnlock()
 
 	stats := make(map[string]interface{})
-	
+
 	// 添加计时器信息
 	timers := make(map[string]time.Duration)
 	for name, duration := range p.timers {
@@ -319,6 +319,20 @@ func (p *PerfStats) GetStats() map[string]interface{} {
 	return stats
 }
 
+// GetTimers 获取所有计时器信息
+func (p *PerfStats) GetTimers() map[string]time.Duration {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
+	// 创建副本以避免并发问题
+	timers := make(map[string]time.Duration)
+	for name, duration := range p.timers {
+		timers[name] = duration
+	}
+
+	return timers
+}
+
 // Reset 重置所有性能统计信息
 func (p *PerfStats) Reset() {
 	p.mu.Lock()
@@ -326,10 +340,10 @@ func (p *PerfStats) Reset() {
 
 	// 清空计时器
 	p.timers = make(map[string]time.Duration)
-	
+
 	// 清空调用次数
 	p.callCounts = make(map[string]int64)
-	
+
 	// 更新最后重置时间
 	p.lastResetTime = time.Now()
-} 
+}

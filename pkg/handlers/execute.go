@@ -9,10 +9,12 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/sashabaranov/go-openai"
 	"go.uber.org/zap"
 
 	"github.com/myysophia/OpsAgent/pkg/assistants"
+	"github.com/myysophia/OpsAgent/pkg/audit"
 	"github.com/myysophia/OpsAgent/pkg/utils"
 )
 
@@ -295,6 +297,7 @@ func Execute(c *gin.Context) {
 
 	// 提取工具使用历史
 	var toolsHistory []ToolHistory
+	var auditToolCalls []audit.ToolCall
 	for i := 0; i < len(chatHistory); i++ {
 		if chatHistory[i].Role == openai.ChatMessageRoleUser && i > 0 {
 			var toolPrompt map[string]interface{}
@@ -305,10 +308,20 @@ func Execute(c *gin.Context) {
 					observation, _ := toolPrompt["observation"].(string)
 
 					if name != "" && input != "" {
+						// 添加到工具历史
 						toolsHistory = append(toolsHistory, ToolHistory{
 							Name:        name,
 							Input:       input,
 							Observation: observation,
+						})
+
+						// 添加到审计工具调用
+						auditToolCalls = append(auditToolCalls, audit.ToolCall{
+							Name:        name,
+							Input:       input,
+							Observation: observation,
+							SequenceNum: len(auditToolCalls),
+							Duration:    0, // 暂时无法获取工具调用耗时
 						})
 					}
 				}
@@ -481,6 +494,28 @@ func Execute(c *gin.Context) {
 		zap.Duration("duration", parseDuration),
 	)
 
+	// 获取性能指标
+	perfMetrics := perfStats.GetTimers()
+
+	// 获取会话和交互ID
+	var sessionID, interactionID uuid.UUID
+	if v, exists := c.Get("session_id"); exists {
+		if id, ok := v.(uuid.UUID); ok {
+			sessionID = id
+		}
+	}
+	if sessionID == uuid.Nil {
+		sessionID = uuid.New()
+	}
+	if v, exists := c.Get("interaction_id"); exists {
+		if id, ok := v.(uuid.UUID); ok {
+			interactionID = id
+		}
+	}
+	if interactionID == uuid.Nil {
+		interactionID = uuid.New()
+	}
+
 	if aiResp.FinalAnswer != "" {
 		responseData := gin.H{
 			"message": aiResp.FinalAnswer,
@@ -495,6 +530,25 @@ func Execute(c *gin.Context) {
 			responseData["observation"] = aiResp.Observation
 			responseData["tools_history"] = toolsHistory
 		}
+
+		// 准备审计数据
+		auditData := map[string]interface{}{
+			"question":           req.Instructions,
+			"model_name":         executeModel,
+			"provider":           req.Provider,
+			"base_url":           req.BaseUrl,
+			"cluster":            req.Cluster,
+			"thought":            aiResp.Thought,
+			"final_answer":       aiResp.FinalAnswer,
+			"status":             "success",
+			"tool_calls":         auditToolCalls,
+			"perf_metrics":       perfMetrics,
+			"assistant_duration": assistantDuration,
+			"parse_duration":     parseDuration,
+		}
+
+		// 将审计数据存入上下文
+		c.Set("audit_data", auditData)
 
 		c.JSON(http.StatusOK, responseData)
 	} else {
@@ -511,6 +565,25 @@ func Execute(c *gin.Context) {
 			responseData["observation"] = aiResp.Observation
 			responseData["tools_history"] = toolsHistory
 		}
+
+		// 准备审计数据
+		auditData := map[string]interface{}{
+			"question":           req.Instructions,
+			"model_name":         executeModel,
+			"provider":           req.Provider,
+			"base_url":           req.BaseUrl,
+			"cluster":            req.Cluster,
+			"thought":            aiResp.Thought,
+			"final_answer":       "",
+			"status":             "processing",
+			"tool_calls":         auditToolCalls,
+			"perf_metrics":       perfMetrics,
+			"assistant_duration": assistantDuration,
+			"parse_duration":     parseDuration,
+		}
+
+		// 将审计数据存入上下文
+		c.Set("audit_data", auditData)
 
 		c.JSON(http.StatusOK, responseData)
 	}

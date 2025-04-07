@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"github.com/myysophia/OpsAgent/pkg/api"
+	"github.com/myysophia/OpsAgent/pkg/audit"
 	"github.com/myysophia/OpsAgent/pkg/utils"
 )
 
@@ -88,8 +89,42 @@ var serverCmd = &cobra.Command{
 		utils.SetGlobalVar("showThought", showThought)
 		utils.SetGlobalVar("logger", logger)
 
+		// 初始化审计日志记录器
+		// 从配置文件中加载审计日志配置
+		config := utils.GetConfig()
+		auditConfig := audit.LoadConfigFromViper(config)
+
+		// 输出审计日志配置信息
+		if auditConfig != nil && auditConfig.Enabled {
+			logger.Info("审计日志配置信息",
+				zap.Bool("enabled", auditConfig.Enabled),
+				zap.String("database_driver", auditConfig.Database.Driver),
+				zap.String("database_host", auditConfig.Database.Host),
+				zap.Int("database_port", auditConfig.Database.Port),
+				zap.String("database_user", auditConfig.Database.User),
+				zap.String("database_name", auditConfig.Database.DBName),
+				zap.Int("async_workers", auditConfig.Async.Workers),
+				zap.Int("retention_days", auditConfig.Retention.Days),
+				zap.String("password", auditConfig.Database.Password),
+			)
+		} else {
+			logger.Info("审计日志未启用")
+		}
+
+		auditLogger, err := audit.NewAuditLogger(auditConfig)
+		if err != nil {
+			logger.Warn("初始化审计日志记录器失败，将继续但不记录审计日志",
+				zap.Error(err),
+			)
+		} else if auditLogger != nil {
+			defer auditLogger.Close()
+			logger.Info("审计日志记录器初始化成功")
+		} else {
+			logger.Info("审计日志记录器未启用")
+		}
+
 		// 使用pkg/api/router.go中的Router函数
-		r := api.Router()
+		r := api.Router(auditLogger)
 
 		addr := fmt.Sprintf(":%d", port)
 		logger.Info("服务器开始监听",

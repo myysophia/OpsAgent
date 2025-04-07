@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/myysophia/OpsAgent/pkg/audit"
 	"github.com/myysophia/OpsAgent/pkg/handlers"
 	"github.com/myysophia/OpsAgent/pkg/middleware"
 	"github.com/myysophia/OpsAgent/pkg/utils"
@@ -15,7 +16,7 @@ import (
 )
 
 // Router 设置API路由
-func Router() *gin.Engine {
+func Router(auditLogger *audit.AuditLogger) *gin.Engine {
 	// 获取日志记录器
 	logger := utils.GetLogger()
 
@@ -28,6 +29,7 @@ func Router() *gin.Engine {
 	// 使用自定义中间件
 	r.Use(gin.Recovery())
 	r.Use(middleware.Logger())
+	r.Use(middleware.AuditMiddleware(auditLogger))
 
 	// 配置CORS
 	r.Use(cors.New(cors.Config{
