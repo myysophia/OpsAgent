@@ -27,10 +27,20 @@ func PythonREPL(script string) (string, error) {
 		zap.String("script", script),
 	)
 
+	// 如果脚本中使用了 Kubernetes Python SDK 但没有指定上下文
+	if strings.Contains(script, "from kubernetes import") && !strings.Contains(script, "config.load_kube_config(context=") && currentKubeContext != "" {
+		// 在脚本开头添加上下文配置
+		contextConfig := fmt.Sprintf("from kubernetes import client, config\nconfig.load_kube_config(context='%s')\n", currentKubeContext)
+		script = contextConfig + script
+		logger.Debug("添加了 Kubernetes 上下文配置",
+			zap.String("context", currentKubeContext),
+		)
+	}
+
 	escapedScript := strings.ReplaceAll(script, "\"", "\\\"")
 	cmdStr := fmt.Sprintf("cd ~/k8s/python-cli && source k8s-env/bin/activate && python3 -c \"%s\"", escapedScript)
 	cmd := exec.Command("bash", "-c", cmdStr)
-	
+
 	logger.Debug("构建命令",
 		zap.String("command", cmdStr),
 	)

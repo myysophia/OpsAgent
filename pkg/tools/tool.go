@@ -6,11 +6,21 @@ import (
 	"github.com/myysophia/OpsAgent/pkg/utils"
 )
 
-var logger *zap.Logger
+var (
+	logger *zap.Logger
+	// 当前使用的 Kubernetes 上下文，由 handlers 包设置
+	currentKubeContext string
+)
 
 func init() {
 	// 使用新的日志工具包获取日志记录器
 	logger = utils.GetLogger()
+}
+
+// SetCurrentKubeContext 设置当前使用的 Kubernetes 上下文
+func SetCurrentKubeContext(context string) {
+	currentKubeContext = context
+	logger.Info("Set current Kubernetes context", zap.String("context", context))
 }
 
 // Tool 是一个接受输入并返回输出的函数类型

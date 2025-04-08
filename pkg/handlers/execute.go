@@ -15,6 +15,7 @@ import (
 
 	"github.com/myysophia/OpsAgent/pkg/assistants"
 	"github.com/myysophia/OpsAgent/pkg/audit"
+	"github.com/myysophia/OpsAgent/pkg/tools"
 	"github.com/myysophia/OpsAgent/pkg/utils"
 )
 
@@ -108,14 +109,17 @@ const (
 	defaultMaxIterations = 5
 )
 
-// switchContext 调用RAG接口切换context
-func switchContext(query string) error {
+// 存储当前使用的 Kubernetes 上下文名称
+var currentKubeContext string
+
+// getContextFromRAG 调用RAG接口获取适合的Kubernetes上下文
+func getContextFromRAG(query string) error {
 	// 获取 logger
 	logger := utils.GetLogger()
 	// 获取性能统计工具
 	perfStats := utils.GetPerfStats()
 	// 开始整体执行计时
-	defer perfStats.TraceFunc("switchContext_total")()
+	defer perfStats.TraceFunc("getContextFromRAG_total")()
 
 	// 构建请求体
 	reqBody := map[string]interface{}{
@@ -152,9 +156,83 @@ func switchContext(query string) error {
 	}
 
 	if result.Code != 200 {
-		return fmt.Errorf("switch context failed: %s", result.Message)
+		return fmt.Errorf("get context from RAG failed: %s", result.Message)
 	}
-	logger.Debug("Context switched successfully", zap.String("response", string(body)))
+
+	// 输出原始响应信息以便调试
+	logger.Debug("Raw response data",
+		zap.Any("data", result.Data),
+		zap.String("data_type", fmt.Sprintf("%T", result.Data)),
+	)
+
+	// 尝试解析响应中的上下文信息
+	if dataMap, ok := result.Data.(map[string]interface{}); ok {
+		logger.Debug("Response data is a map", zap.Any("data_map", dataMap))
+
+		// 尝试直接从数据中提取 context_name
+		if contextName, ok := dataMap["context_name"].(string); ok && contextName != "" {
+			// 直接使用 context_name
+			currentKubeContext = contextName
+			tools.SetCurrentKubeContext(contextName)
+			logger.Info("Set Kubernetes context directly", zap.String("context", contextName))
+		} else {
+			// 尝试从旧格式中提取上下文信息
+			if contextSwitch, ok := dataMap["context_switch"].(map[string]interface{}); ok {
+				logger.Debug("Found context_switch in data", zap.Any("context_switch", contextSwitch))
+
+				// 尝试从 command 中提取上下文名称
+				if cmd, ok := contextSwitch["command"].(string); ok {
+					logger.Debug("Found command in context_switch", zap.String("command", cmd))
+
+					// 直接使用命令作为上下文名称
+					contextName := cmd
+
+					if contextName != "" {
+						// 设置当前使用的上下文
+						currentKubeContext = contextName
+						// 设置 tools 包中的上下文变量
+						tools.SetCurrentKubeContext(contextName)
+						logger.Info("Set Kubernetes context from command",
+							zap.String("context", contextName),
+							zap.String("command", cmd),
+						)
+					}
+				}
+			}
+		}
+	} else if dataStr, ok := result.Data.(string); ok {
+		// 如果 Data 是字符串，尝试解析为 JSON
+		var contextData struct {
+			KubecontextKnowledge []struct {
+				ContextName      string `json:"context_name"`
+				RegionIdentifier string `json:"region_identifier"`
+			} `json:"kubecontext_knowledge"`
+		}
+
+		if err := json.Unmarshal([]byte(dataStr), &contextData); err != nil {
+			logger.Warn("Failed to parse kubecontext_knowledge data",
+				zap.Error(err),
+				zap.String("data", dataStr),
+			)
+		} else if len(contextData.KubecontextKnowledge) > 0 {
+			// 成功解析到了上下文知识
+			context := contextData.KubecontextKnowledge[0]
+
+			// 设置当前使用的上下文
+			currentKubeContext = context.ContextName
+			// 设置 tools 包中的上下文变量
+			tools.SetCurrentKubeContext(context.ContextName)
+
+			logger.Info("Set Kubernetes context from knowledge",
+				zap.String("context", context.ContextName),
+				zap.String("region", context.RegionIdentifier),
+			)
+		}
+	}
+
+	logger.Debug("Context information retrieved successfully",
+		zap.String("current_context", currentKubeContext),
+	)
 	return nil
 }
 
@@ -220,8 +298,9 @@ func Execute(c *gin.Context) {
 		zap.String("apiKey", "***"),
 	)
 
-	// 切换context
-	err := switchContext(req.Args)
+	// 获取适合的Kubernetes上下文
+	logger.Info("开始获取Kubernetes上下文", zap.String("args", req.Args))
+	err := getContextFromRAG(req.Args)
 	if err != nil {
 		logger.Error("RAG Flow 服务异常!", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -235,6 +314,18 @@ func Execute(c *gin.Context) {
 				req.Args, req.Args),
 		})
 		return
+	}
+
+	// 检查上下文是否设置成功
+	logger.Info("获取Kubernetes上下文成功",
+		zap.String("current_context", currentKubeContext),
+	)
+
+	// 如果上下文为空，设置一个默认值
+	if currentKubeContext == "" {
+		currentKubeContext = "ask-cn" // 设置一个默认值
+		tools.SetCurrentKubeContext(currentKubeContext)
+		logger.Warn("上下文为空，设置默认值", zap.String("default_context", currentKubeContext))
 	}
 
 	// 确定使用的模型

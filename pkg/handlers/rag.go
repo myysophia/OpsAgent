@@ -2,13 +2,13 @@ package handlers
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 
 	"github.com/gin-gonic/gin"
-	"github.com/myysophia/OpsAgent/pkg/kubectl"
 	"github.com/myysophia/OpsAgent/pkg/rag"
 	"github.com/myysophia/OpsAgent/pkg/utils"
 	"go.uber.org/zap"
@@ -25,13 +25,15 @@ type RAGResponse struct {
 	Data    interface{} `json:"data"`
 }
 
+// KubeContextKnowledge 表示 Kubernetes 上下文知识
+type KubeContextKnowledge struct {
+	ContextName      string `json:"context_name"`
+	RegionIdentifier string `json:"region_identifier"`
+}
+
+// ContextSwitchData 表示上下文切换数据
 type ContextSwitchData struct {
-	ContextSwitch struct {
-		Command string `json:"command"`
-		Status  string `json:"status"`
-		Message string `json:"message"`
-	} `json:"context_switch"`
-	QueryResult interface{} `json:"query_result"`
+	KubecontextKnowledge []KubeContextKnowledge `json:"kubecontext_knowledge"`
 }
 
 // SwitchContext 处理RAG上下文切换请求
@@ -81,46 +83,33 @@ func SwitchContext(c *gin.Context) {
 	)
 
 	ragService := rag.NewRAGService(ragAPIKey, ragAppID)
-	kubectlExecutor := kubectl.NewExecutor()
 
-	// 调用RAG服务获取推荐命令
-	recommendCmd, err := ragService.GetRecommendCommand(req.Query)
+	// 调用RAG服务获取上下文信息
+	contextInfo, err := ragService.GetContextInfo(req.Query)
 	if err != nil {
-		utils.Error("Failed to get recommend command", zap.Error(err))
+		utils.Error("Failed to get context info", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
-			"message": fmt.Sprintf("Failed to get recommend command: %v", err),
+			"message": fmt.Sprintf("Failed to get context info: %v", err),
 		})
 		return
 	}
 
-	// 执行kubectl命令
-	output, err := kubectlExecutor.ExecuteCommand(recommendCmd)
-	if err != nil {
-		utils.Error("Failed to execute command", zap.Error(err))
+	// 解析上下文信息
+	var contextData ContextSwitchData
+	if err := json.Unmarshal([]byte(contextInfo), &contextData); err != nil {
+		utils.Error("Failed to parse context info", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
-			"message": fmt.Sprintf("Failed to execute command: %v", err),
+			"message": fmt.Sprintf("Failed to parse context info: %v", err),
 		})
 		return
 	}
-
 	// 构建响应
 	response := RAGResponse{
 		Code:    200,
 		Message: "success",
-		Data: ContextSwitchData{
-			ContextSwitch: struct {
-				Command string `json:"command"`
-				Status  string `json:"status"`
-				Message string `json:"message"`
-			}{
-				Command: recommendCmd,
-				Status:  "success",
-				Message: output,
-			},
-			QueryResult: nil, // 这里可以添加用户查询的执行结果
-		},
+		Data:    contextInfo,
 	}
 
 	c.JSON(http.StatusOK, response)

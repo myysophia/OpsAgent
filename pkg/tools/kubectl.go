@@ -77,6 +77,23 @@ func Kubectl(command string) (string, error) {
 		command = "kubectl " + command
 	}
 
+	// 如果有上下文信息，并且命令中没有指定 --context 参数，则添加上下文参数
+	if currentKubeContext != "" && !strings.Contains(command, "--context") {
+		// 将 --context 参数添加在 kubectl 命令之后
+		parts := strings.SplitN(command, " ", 2)
+		if len(parts) == 2 {
+			// 如果命令包含空格，将 --context 参数添加在 kubectl 之后
+			command = parts[0] + " --context=\"" + currentKubeContext + "\" " + parts[1]
+		} else {
+			// 如果命令只有 kubectl，直接添加 --context 参数
+			command = command + " --context=\"" + currentKubeContext + "\""
+		}
+		logger.Debug("Added context to kubectl command",
+			zap.String("context", currentKubeContext),
+			zap.String("command", command),
+		)
+	}
+
 	// 执行命令
 	output, err := executeShellCommand(command)
 

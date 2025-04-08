@@ -183,7 +183,7 @@ func NewAuditLogger(config *Config) (*AuditLogger, error) {
 					zap.String("format", "2"),
 				)
 
-					// 尝试使用第三种格式
+				// 尝试使用第三种格式
 				encodedPassword := url.QueryEscape(dbConfig.Password)
 				connStr = fmt.Sprintf(
 					"postgresql://%s:%s@%s:%d/%s?sslmode=%s",
@@ -396,10 +396,10 @@ func (al *AuditLogger) worker(id int) {
 		// 处理批次中的每一条日志
 		for _, entry := range batch {
 			if err := al.saveToDatabase(entry, tx); err != nil {
-				al.logger.Error("保存审计日志失败",
-					zap.Error(err),
-					zap.String("interaction_id", entry.InteractionID.String()),
-				)
+				//al.logger.Error("保存审计日志失败",
+				//	zap.Error(err),
+				//	zap.String("interaction_id", entry.InteractionID.String()),
+				//)
 				return // 如果有错误，回滚整个批次
 			}
 		}
