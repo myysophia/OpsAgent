@@ -71,8 +71,7 @@ const executeSystemPrompt_cn = `您是Kubernetes和云原生网络的技术专�
 - 命令参数涉及特殊字符（如 []、()、"）时，优先使用单引号 ' 包裹，避免 Shell 解析错误。
 - 避免在 zsh 中使用未转义的双引号（如 \"），防止触发模式匹配。
 - 当使用awk时使用单引号（如 '{print $1}'），避免双引号转义导致语法错误。
-- 使用kubectl工具时 不要使用-n或者--namespace参数,因为rag中已经选择好了集群和namespace,模糊匹配用户提供的服务名称是必须的.
-
+- 当用户问题中包含"域名、访问地址"时，优先查询ingress 资源进行匹配。
 重要提示：始终使用以下 JSON 格式返回响应：
 {
   "question": "<用户的输入问题>",
@@ -165,12 +164,29 @@ func getContextFromRAG(query string) error {
 		zap.String("data_type", fmt.Sprintf("%T", result.Data)),
 	)
 
+	// 定义有效的context列表
+	validContexts := map[string]bool{
+		"eks-au":         true,
+		"ask-cn":         true,
+		"ask-eu":         true,
+		"ask-ua":         true,
+		"eks-in":         true,
+		"eks-us":         true,
+		"eks-ems-eu-new": true,
+		"cce-ems-plus-2": true,
+		"ems-uat-new-1":  true,
+	}
+
 	// 尝试解析响应中的上下文信息
 	if dataMap, ok := result.Data.(map[string]interface{}); ok {
 		logger.Debug("Response data is a map", zap.Any("data_map", dataMap))
 
 		// 尝试直接从数据中提取 context_name
 		if contextName, ok := dataMap["context_name"].(string); ok && contextName != "" {
+			// 验证context是否在有效列表中
+			if !validContexts[contextName] {
+				return fmt.Errorf("invalid context: %s, please specify a valid context from: eks-au, ask-cn, ask-eu, ask-ua, eks-in, eks-us, eks-ems-eu-new, cce-ems-plus-2, ems-uat-new-1", contextName)
+			}
 			// 直接使用 context_name
 			currentKubeContext = contextName
 			tools.SetCurrentKubeContext(contextName)
@@ -188,6 +204,10 @@ func getContextFromRAG(query string) error {
 					contextName := cmd
 
 					if contextName != "" {
+						// 验证context是否在有效列表中
+						if !validContexts[contextName] {
+							return fmt.Errorf("invalid context: %s, please specify a valid context from: eks-au, ask-cn, ask-eu, ask-ua, eks-in, eks-us, eks-ems-eu-new, cce-ems-plus-2, ems-uat-new-1", contextName)
+						}
 						// 设置当前使用的上下文
 						currentKubeContext = contextName
 						// 设置 tools 包中的上下文变量
@@ -217,6 +237,11 @@ func getContextFromRAG(query string) error {
 		} else if len(contextData.KubecontextKnowledge) > 0 {
 			// 成功解析到了上下文知识
 			context := contextData.KubecontextKnowledge[0]
+
+			// 验证context是否在有效列表中
+			if !validContexts[context.ContextName] {
+				return fmt.Errorf("invalid context: %s, please specify a valid context from: eks-au, ask-cn, ask-eu, ask-ua, eks-in, eks-us, eks-ems-eu-new, cce-ems-plus-2, ems-uat-new-1", context.ContextName)
+			}
 
 			// 设置当前使用的上下文
 			currentKubeContext = context.ContextName
@@ -384,19 +409,46 @@ func Execute(c *gin.Context) {
 		return
 	}
 
+	// 获取日志记录器
+	logger = utils.GetLogger().Named("execute-handler")
+
 	// 提取工具使用历史
 	var toolsHistory []ToolHistory
 	var auditToolCalls []audit.ToolCall
+
+	logger.Debug("开始提取工具使用历史",
+		zap.Int("chat_history_length", len(chatHistory)),
+	)
+
 	for i := 0; i < len(chatHistory); i++ {
 		if chatHistory[i].Role == openai.ChatMessageRoleUser && i > 0 {
+			logger.Debug(fmt.Sprintf("处理第 %d 条聊天记录", i),
+				zap.String("role", string(chatHistory[i].Role)),
+				zap.String("content", chatHistory[i].Content),
+			)
+
 			var toolPrompt map[string]interface{}
 			if err := json.Unmarshal([]byte(chatHistory[i].Content), &toolPrompt); err == nil {
+				logger.Debug("解析工具提示成功",
+					zap.Any("tool_prompt", toolPrompt),
+				)
+
 				if action, ok := toolPrompt["action"].(map[string]interface{}); ok {
+					logger.Debug("获取到动作",
+						zap.Any("action", action),
+					)
+
 					name, _ := action["name"].(string)
 					input, _ := action["input"].(string)
 					observation, _ := toolPrompt["observation"].(string)
 
 					if name != "" && input != "" {
+						logger.Debug("添加工具调用",
+							zap.String("name", name),
+							zap.String("input", input),
+							zap.String("observation", observation),
+						)
+
 						// 添加到工具历史
 						toolsHistory = append(toolsHistory, ToolHistory{
 							Name:        name,
@@ -417,6 +469,11 @@ func Execute(c *gin.Context) {
 			}
 		}
 	}
+
+	logger.Debug("工具使用历史提取完成",
+		zap.Int("tools_history_count", len(toolsHistory)),
+		zap.Int("audit_tool_calls_count", len(auditToolCalls)),
+	)
 
 	// 开始响应解析计时
 	perfStats.StartTimer("execute_response_parse")
@@ -620,6 +677,29 @@ func Execute(c *gin.Context) {
 			responseData["tools_history"] = toolsHistory
 		}
 
+		// 获取日志记录器
+		logger := utils.GetLogger().Named("execute-handler")
+
+		// 输出工具调用信息
+		logger.Debug("工具调用信息",
+			zap.Int("audit_tool_calls_count", len(auditToolCalls)),
+		)
+		for i, tool := range auditToolCalls {
+			logger.Debug(fmt.Sprintf("工具调用 %d", i),
+				zap.String("name", tool.Name),
+				zap.String("input", tool.Input),
+				zap.Int("sequence_num", tool.SequenceNum),
+				zap.Duration("duration", tool.Duration),
+			)
+		}
+
+		// 输出性能指标信息
+		logger.Debug("性能指标信息",
+			zap.Any("perf_metrics", perfMetrics),
+			zap.Duration("assistant_duration", assistantDuration),
+			zap.Duration("parse_duration", parseDuration),
+		)
+
 		// 准备审计数据
 		auditData := map[string]interface{}{
 			"question":           req.Instructions,
@@ -635,6 +715,11 @@ func Execute(c *gin.Context) {
 			"assistant_duration": assistantDuration,
 			"parse_duration":     parseDuration,
 		}
+
+		// 输出审计数据
+		logger.Debug("设置审计数据",
+			zap.Any("audit_data", auditData),
+		)
 
 		// 将审计数据存入上下文
 		c.Set("audit_data", auditData)
