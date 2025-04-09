@@ -77,6 +77,11 @@ func Kubectl(command string) (string, error) {
 		command = "kubectl " + command
 	}
 
+	// 添加kubeconfig参数
+	if !strings.Contains(command, "--kubeconfig") {
+		command = strings.Replace(command, "kubectl", "kubectl --kubeconfig=./config", 1)
+	}
+
 	// 如果有上下文信息，并且命令中没有指定 --context 参数，则添加上下文参数
 	if currentKubeContext != "" && !strings.Contains(command, "--context") {
 		// 将 --context 参数添加在 kubectl 命令之后

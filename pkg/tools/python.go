@@ -15,9 +15,10 @@ package tools
 
 import (
 	"fmt"
-	"github.com/fatih/color"
 	"os/exec"
 	"strings"
+
+	"github.com/fatih/color"
 	"go.uber.org/zap"
 )
 
@@ -30,7 +31,7 @@ func PythonREPL(script string) (string, error) {
 	// 如果脚本中使用了 Kubernetes Python SDK 但没有指定上下文
 	if strings.Contains(script, "from kubernetes import") && !strings.Contains(script, "config.load_kube_config(context=") && currentKubeContext != "" {
 		// 在脚本开头添加上下文配置
-		contextConfig := fmt.Sprintf("from kubernetes import client, config\nconfig.load_kube_config(context='%s')\n", currentKubeContext)
+		contextConfig := fmt.Sprintf("from kubernetes import client, config\nconfig.load_kube_config(context='%s', config_file='./config')\n", currentKubeContext)
 		script = contextConfig + script
 		logger.Debug("添加了 Kubernetes 上下文配置",
 			zap.String("context", currentKubeContext),
