@@ -71,6 +71,7 @@ const executeSystemPrompt_cn = `您是Kubernetes和云原生网络的技术专�
 - 命令参数涉及特殊字符（如 []、()、"）时，优先使用单引号 ' 包裹，避免 Shell 解析错误。
 - 避免在 zsh 中使用未转义的双引号（如 \"），防止触发模式匹配。
 - 当使用awk时使用单引号（如 '{print $1}'），避免双引号转义导致语法错误。
+- 当用户问题中包含"镜像版本、版本号、分支"时，优先使用kubectl get pods -o custom-columns='NAME:.metadata.name,IMAGE:.spec.containers[*].image' | grep '用户问题中的服务名称'。
 - 当用户问题中包含"域名、访问地址"时，优先查询ingress 资源进行匹配。
 重要提示：始终使用以下 JSON 格式返回响应：
 {
