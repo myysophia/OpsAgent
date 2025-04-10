@@ -441,5 +441,12 @@ Unable to parse tools from LLM (invalid character '\n' in string literal), summa
 这个操作会产生大量的数据，超过上下文窗口。目前定义的max_token是2048
 kubectl get pods/node/deploy/statefulset  -o json
 
-
+13. 多问题理解能力？
+2025年04月10日23:40:09
+当提问 "cn节点的设备管理平台有几个pod？镜像版本是什么？"
+发现回答质量下降
+```bash
+kubectl --context="ask-cn" --kubeconfig=./config get pods --field-selector spec.nodeName=cn -o custom-columns='NAME:.metadata.name,IMAGE:.spec.containers[*].image' --no-headers | grep 'vnnox-middle-device-management'
+```
+根据这个命令，很明显LLM理解错了，而且还没有继续寻找答案，而是直接返回了。
 ## releaseNote

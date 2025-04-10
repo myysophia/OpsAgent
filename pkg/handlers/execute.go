@@ -116,7 +116,8 @@ const executeSystemPrompt_cn = `您是Kubernetes和云原生网络的技术专�
    - 分析可能的原因
    - 提供改进建议
    - 询问用户是否需要进一步澄清
-
+6. 当用户问题中出现"删除、重启、delete、patch、drop"等关键字时，必须委婉拒绝用户没有权限执行这些操作。
+7. 当用户提问"你是谁？你可以干什么的时候？你可以做什么？"时，请委婉告诉用户你可以干什么？
 当结果为空时，应该这样处理：
 1. 首先尝试使用更宽松的查询,但是总应该避免全量输出(-ojson/yaml)，例如使用 jsonpath 或 custom-columns 来获取特定字段。
 2. 如果仍然为空，在 final_answer 中提供：
@@ -346,34 +347,48 @@ func Execute(c *gin.Context) {
 		zap.String("apiKey", "***"),
 	)
 
-	// 获取适合的Kubernetes上下文
-	logger.Info("开始获取Kubernetes上下文", zap.String("args", req.Args))
-	err := getContextFromRAG(req.Args)
-	if err != nil {
-		logger.Error("RAG Flow 服务异常!", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":  fmt.Sprintf("RAG Flow 服务异常! %v", err),
-			"status": "error",
-			"message": fmt.Sprintf("无法获取你要查询的集群是哪一个？您可以这样问：\n\n"+
-				"中国节点%s\n"+
-				"储能中国节点%s\n"+
-				".......\n"+
-				"您是想查询哪个节点的信息呢？",
-				req.Args, req.Args),
-		})
-		return
-	}
+	// 检查是否是特定问题
+	isSpecialQuestion := strings.Contains(req.Args, "你是谁？") ||
+		strings.Contains(req.Args, "你可以干什么？") ||
+		strings.Contains(req.Args, "你都会什么？") // 如果不是特定问题，则调用RAG接口获取Kubernetes上下文
+	if !isSpecialQuestion {
+		// 获取适合的Kubernetes上下文
+		logger.Info("开始获取Kubernetes上下文", zap.String("args", req.Args))
+		err := getContextFromRAG(req.Args)
+		if err != nil {
+			logger.Error("RAG Flow 服务异常!", zap.Error(err))
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error":  fmt.Sprintf("RAG Flow 服务异常! %v", err),
+				"status": "error",
+				"message": fmt.Sprintf("无法获取你要查询的集群是哪一个？您可以这样问：\n\n"+
+					"中国节点%s\n"+
+					"储能中国节点%s\n"+
+					".......\n"+
+					"您是想查询哪个节点的信息呢？",
+					req.Args, req.Args),
+			})
+			return
+		}
 
-	// 检查上下文是否设置成功
-	logger.Info("获取Kubernetes上下文成功",
-		zap.String("current_context", currentKubeContext),
-	)
+		// 检查上下文是否设置成功
+		logger.Info("获取Kubernetes上下文成功",
+			zap.String("current_context", currentKubeContext),
+		)
 
-	// 如果上下文为空，设置一个默认值
-	if currentKubeContext == "" {
-		currentKubeContext = "ask-cn" // 设置一个默认值
+		// 如果上下文为空，设置一个默认值
+		if currentKubeContext == "" {
+			currentKubeContext = "ask-cn" // 设置一个默认值
+			tools.SetCurrentKubeContext(currentKubeContext)
+			logger.Warn("上下文为空，设置默认值", zap.String("default_context", currentKubeContext))
+		}
+	} else {
+		// 对于特定问题，设置一个默认上下文
+		currentKubeContext = "ask-cn"
 		tools.SetCurrentKubeContext(currentKubeContext)
-		logger.Warn("上下文为空，设置默认值", zap.String("default_context", currentKubeContext))
+		logger.Info("特殊问题，使用默认上下文",
+			zap.String("default_context", currentKubeContext),
+			zap.String("question", req.Args),
+		)
 	}
 
 	// 确定使用的模型
