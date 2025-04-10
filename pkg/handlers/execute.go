@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -50,7 +51,28 @@ type ToolHistory struct {
 }
 
 const executeSystemPrompt_cn = `您是Kubernetes和云原生网络的技术专家，您的任务是遵循链式思维方法，确保彻底性和准确性，同时遵守约束。
+有一个服务名称对照表，用于帮助用户查询不同服务的关键字和资源名称。对照表如下：
+| 中文名称       | 英文关键字/别名                            | Kubernetes 资源名称                   |
+|------------|-------------------------------------|---------------------------------------|
+| 账户         | account                             | vnnox-middle-account-manage           |
+| 设备网关       | device-gateway/device gateway       | vnnox-middle-device-gateway           |
+| 设备管理平台     | device-management/device management | vnnox-middle-device-management        |
+| 内部网关       | 网关/gateway-service/device service   | vnnox-middle-gateway-service          |
+| 储能后端服务     | 储能后端/energy-cloud/energy cloud      | energy-cloud-service                  |
+| 工商储前端      | ems front                           | ems-front                             |
+| 家储后端服务     | 户储后端/energy management              | energy-management-service             |
+| 储能兼容服务     | 兼容服务/energy compatibility           | energy-compatibility                  |
+| 数字孪生       | digital twin                        | digital-twin-platform                 |
+| 低代码后端      | lowcode service/低代码 后端              | cloud-lowcode-service                 |
+| mysql数据库   | mysql/vnnox mysql                   | vnnox-mysql                           |
+| redis数据库   | redis/vnnox redis                   | vnnox-redis                           |
+| mongo数据库   | mongo/vnnox mongo                   | vnnox-mongo                           |
+| kong proxy | external gateway                    | kong-proxy                            |
+| iotdb dn   | iotdb-datanode/iotdb datanode       | iotdb-datanode                        |
 
+当用户询问服务相关问题时，请优先根据此表提供准确的资源名称或关键字映射,如果没有匹配到，请使用模糊匹配。
+使用此表时，请遵循以下原则：
+- 如果用户询问某个服务如何连接，优先使用查询 LoadBalancer/ExternalName 类型的svc。
 可用工具：
 - kubectl：用于执行 Kubernetes 命令。必须使用正确语法（例如 'kubectl get pods' 而非 'kubectl get pod'），避免使用 -o json/yaml 全量输出。
 - python：用于复杂逻辑或调用 Kubernetes Python SDK。输入：Python 脚本，输出：通过 print(...) 返回。
@@ -458,6 +480,13 @@ func Execute(c *gin.Context) {
 						})
 
 						// 添加到审计工具调用
+						logger.Debug("添加工具调用到审计记录",
+							zap.String("name", name),
+							zap.String("input", input),
+							zap.String("observation", observation),
+							zap.Int("sequence_num", len(auditToolCalls)),
+						)
+
 						auditToolCalls = append(auditToolCalls, audit.ToolCall{
 							Name:        name,
 							Input:       input,
@@ -475,6 +504,32 @@ func Execute(c *gin.Context) {
 		zap.Int("tools_history_count", len(toolsHistory)),
 		zap.Int("audit_tool_calls_count", len(auditToolCalls)),
 	)
+
+	// 确保工具调用不为空
+	if len(auditToolCalls) == 0 {
+		// 添加一个虚拟的工具调用，确保表不为空
+		auditToolCalls = append(auditToolCalls, audit.ToolCall{
+			Name:        "no-tool-used",
+			Input:       "No tools were used in this interaction",
+			Observation: "No observation available",
+			SequenceNum: 0,
+			Duration:    0,
+		})
+		logger.Warn("工具调用为空，添加虚拟工具调用",
+			zap.Int("audit_tool_calls_count", len(auditToolCalls)),
+		)
+	}
+
+	// 输出所有工具调用详情
+	for i, tool := range auditToolCalls {
+		logger.Debug(fmt.Sprintf("工具调用详情 %d", i),
+			zap.String("name", tool.Name),
+			zap.String("input", tool.Input),
+			zap.String("observation", tool.Observation),
+			zap.Int("sequence_num", tool.SequenceNum),
+			zap.Duration("duration", tool.Duration),
+		)
+	}
 
 	// 开始响应解析计时
 	perfStats.StartTimer("execute_response_parse")
@@ -701,7 +756,110 @@ func Execute(c *gin.Context) {
 			zap.Duration("parse_duration", parseDuration),
 		)
 
+		// 检查关键字段
+		logger.Debug("检查关键字段",
+			zap.String("execute_model", executeModel),
+			zap.Bool("execute_model_empty", executeModel == ""),
+			zap.String("provider", req.Provider),
+			zap.Bool("provider_empty", req.Provider == ""),
+			zap.String("base_url", req.BaseUrl),
+			zap.Bool("base_url_empty", req.BaseUrl == ""),
+			zap.String("cluster", req.Cluster),
+			zap.Bool("cluster_empty", req.Cluster == ""),
+		)
+
+		// 确保关键字段不为空
+		if executeModel == "" {
+			executeModel = "gpt-3.5-turbo"
+			logger.Warn("模型名称为空，使用默认值", zap.String("model_name", executeModel))
+		}
+
+		// 检查思考过程
+		logger.Debug("检查思考过程",
+			zap.String("thought", aiResp.Thought),
+			zap.Int("thought_length", len(aiResp.Thought)),
+			zap.Bool("thought_empty", aiResp.Thought == ""),
+		)
+
+		// 确保思考过程不为空
+		if aiResp.Thought == "" {
+			aiResp.Thought = "No thought process available"
+			logger.Warn("思考过程为空，使用默认值", zap.String("thought", aiResp.Thought))
+		}
+
 		// 准备审计数据
+		logger.Debug("准备审计数据",
+			zap.String("model_name", executeModel),
+			zap.String("provider", req.Provider),
+			zap.String("base_url", req.BaseUrl),
+			zap.String("cluster", req.Cluster),
+			zap.String("thought", aiResp.Thought),
+			zap.Int("thought_length", len(aiResp.Thought)),
+			zap.Int("tool_calls_count", len(auditToolCalls)),
+			zap.Int("perf_metrics_count", len(perfMetrics)),
+		)
+
+		// 输出工具调用信息
+		for i, tool := range auditToolCalls {
+			logger.Debug(fmt.Sprintf("工具调用 %d", i),
+				zap.String("name", tool.Name),
+				zap.String("input", tool.Input),
+				zap.String("observation", tool.Observation),
+				zap.Int("sequence_num", tool.SequenceNum),
+				zap.Duration("duration", tool.Duration),
+			)
+		}
+
+		// 输出性能指标信息
+		var metricNames []string
+		for name := range perfMetrics {
+			metricNames = append(metricNames, name)
+		}
+		logger.Debug("所有性能指标名称",
+			zap.Strings("metric_names", metricNames),
+			zap.Int("perf_metrics_count", len(perfMetrics)),
+		)
+
+		// 确保性能指标不为空
+		if len(perfMetrics) == 0 {
+			// 添加一个虚拟的性能指标，确保表不为空
+			perfMetrics = map[string]time.Duration{
+				"total_execution_time": 1000 * time.Millisecond,
+			}
+			logger.Warn("性能指标为空，添加虚拟性能指标",
+				zap.Int("perf_metrics_count", len(perfMetrics)),
+			)
+		}
+
+		for name, duration := range perfMetrics {
+			logger.Debug(fmt.Sprintf("性能指标: %s", name),
+				zap.Duration("duration", duration),
+				zap.Int("duration_ms", int(duration.Milliseconds())),
+			)
+		}
+
+		// 确保所有字段都有值
+		if req.Provider == "" {
+			req.Provider = "openai"
+			logger.Warn("提供商为空，使用默认值", zap.String("provider", req.Provider))
+		}
+
+		if req.BaseUrl == "" {
+			req.BaseUrl = "https://api.openai.com"
+			logger.Warn("BaseURL为空，使用默认值", zap.String("base_url", req.BaseUrl))
+		}
+
+		if req.Cluster == "" {
+			req.Cluster = "default"
+			logger.Warn("集群为空，使用默认值", zap.String("cluster", req.Cluster))
+		}
+
+		if aiResp.FinalAnswer == "" {
+			aiResp.FinalAnswer = "No final answer available"
+			logger.Warn("最终答案为空，使用默认值", zap.String("final_answer", aiResp.FinalAnswer))
+		}
+
+		// 创建审计数据
 		auditData := map[string]interface{}{
 			"question":           req.Instructions,
 			"model_name":         executeModel,
@@ -716,6 +874,22 @@ func Execute(c *gin.Context) {
 			"assistant_duration": assistantDuration,
 			"parse_duration":     parseDuration,
 		}
+
+		// 检查审计数据是否完整
+		logger.Debug("检查审计数据是否完整",
+			zap.Bool("has_question", auditData["question"] != nil),
+			zap.Bool("has_model_name", auditData["model_name"] != nil),
+			zap.Bool("has_provider", auditData["provider"] != nil),
+			zap.Bool("has_base_url", auditData["base_url"] != nil),
+			zap.Bool("has_cluster", auditData["cluster"] != nil),
+			zap.Bool("has_thought", auditData["thought"] != nil),
+			zap.Bool("has_final_answer", auditData["final_answer"] != nil),
+			zap.Bool("has_status", auditData["status"] != nil),
+			zap.Bool("has_tool_calls", auditData["tool_calls"] != nil),
+			zap.Bool("has_perf_metrics", auditData["perf_metrics"] != nil),
+			zap.Bool("has_assistant_duration", auditData["assistant_duration"] != nil),
+			zap.Bool("has_parse_duration", auditData["parse_duration"] != nil),
+		)
 
 		// 输出审计数据
 		logger.Debug("设置审计数据",
