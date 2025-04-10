@@ -94,6 +94,17 @@ var serverCmd = &cobra.Command{
 		config := utils.GetConfig()
 		auditConfig := audit.LoadConfigFromViper(config)
 
+		// 检查数据库连接和表结构
+		if err := audit.CheckDatabase(auditConfig); err != nil {
+			logger.Error("检查数据库失败",
+				zap.Error(err),
+			)
+			// 禁用审计日志
+			if auditConfig != nil {
+				auditConfig.Enabled = false
+			}
+		}
+
 		// 输出审计日志配置信息
 		if auditConfig != nil && auditConfig.Enabled {
 			logger.Info("审计日志配置信息",

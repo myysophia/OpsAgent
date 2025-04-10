@@ -347,7 +347,38 @@ func NewAuditLogger(config *Config) (*AuditLogger, error) {
 func (al *AuditLogger) LogInteraction(entry LogEntry) {
 	// 如果审计日志记录器为空（未启用），直接返回
 	if al == nil {
+		logger := utils.GetLogger().Named("audit-logger")
+		logger.Warn("审计日志记录器为空，无法记录日志")
 		return
+	}
+
+	// 输出详细的日志信息
+	al.logger.Debug("开始记录交互日志",
+		zap.String("interaction_id", entry.InteractionID.String()),
+		zap.String("session_id", entry.SessionID.String()),
+		zap.String("user_id", entry.UserID),
+		zap.String("question", entry.Question),
+		zap.String("model_name", entry.ModelName),
+		zap.String("thought", entry.Thought),
+		zap.Int("tool_calls_count", len(entry.ToolCalls)),
+		zap.Int("perf_metrics_count", len(entry.PerfMetrics)),
+	)
+
+	// 输出工具调用信息
+	for i, tool := range entry.ToolCalls {
+		al.logger.Debug(fmt.Sprintf("工具调用 %d", i),
+			zap.String("name", tool.Name),
+			zap.String("input", tool.Input),
+			zap.Int("sequence_num", tool.SequenceNum),
+			zap.Duration("duration", tool.Duration),
+		)
+	}
+
+	// 输出性能指标信息
+	for name, duration := range entry.PerfMetrics {
+		al.logger.Debug(fmt.Sprintf("性能指标: %s", name),
+			zap.Duration("duration", duration),
+		)
 	}
 
 	select {
@@ -385,6 +416,11 @@ func (al *AuditLogger) worker(id int) {
 			return
 		}
 
+		al.logger.Debug("开始处理批次",
+			zap.Int("worker_id", id),
+			zap.Int("batch_size", len(batch)),
+		)
+
 		// 开始事务
 		tx, err := al.db.BeginTx(al.ctx, nil)
 		if err != nil {
@@ -396,10 +432,10 @@ func (al *AuditLogger) worker(id int) {
 		// 处理批次中的每一条日志
 		for _, entry := range batch {
 			if err := al.saveToDatabase(entry, tx); err != nil {
-				//al.logger.Error("保存审计日志失败",
-				//	zap.Error(err),
-				//	zap.String("interaction_id", entry.InteractionID.String()),
-				//)
+				al.logger.Error("保存审计日志失败",
+					zap.Error(err),
+					zap.String("interaction_id", entry.InteractionID.String()),
+				)
 				return // 如果有错误，回滚整个批次
 			}
 		}
@@ -408,6 +444,11 @@ func (al *AuditLogger) worker(id int) {
 		if err := tx.Commit(); err != nil {
 			al.logger.Error("提交事务失败", zap.Error(err))
 			return
+		} else {
+			al.logger.Info("批量处理成功",
+				zap.Int("worker_id", id),
+				zap.Int("batch_size", len(batch)),
+			)
 		}
 
 		al.logger.Debug("批量处理完成",
@@ -422,6 +463,19 @@ func (al *AuditLogger) worker(id int) {
 	for {
 		select {
 		case entry := <-al.logChan:
+			// 输出日志条目信息
+			al.logger.Debug("从队列中获取到审计日志条目",
+				zap.Int("worker_id", id),
+				zap.String("interaction_id", entry.InteractionID.String()),
+				zap.String("model_name", entry.ModelName),
+				zap.String("provider", entry.Provider),
+				zap.String("base_url", entry.BaseURL),
+				zap.String("thought", entry.Thought),
+				zap.Int("thought_length", len(entry.Thought)),
+				zap.Int("tool_calls_count", len(entry.ToolCalls)),
+				zap.Int("perf_metrics_count", len(entry.PerfMetrics)),
+			)
+
 			// 添加到批次
 			batch = append(batch, entry)
 
@@ -445,6 +499,14 @@ func (al *AuditLogger) worker(id int) {
 
 // saveToDatabase 将日志保存到数据库
 func (al *AuditLogger) saveToDatabase(entry LogEntry, tx *sql.Tx) error {
+	al.logger.Debug("开始保存审计日志到数据库",
+		zap.String("interaction_id", entry.InteractionID.String()),
+		zap.String("session_id", entry.SessionID.String()),
+		zap.String("thought", entry.Thought),
+		zap.Int("tool_calls_count", len(entry.ToolCalls)),
+		zap.Int("perf_metrics_count", len(entry.PerfMetrics)),
+	)
+
 	// 如果没有提供事务，创建新的事务
 	var err error
 	var manageTx bool
@@ -460,70 +522,218 @@ func (al *AuditLogger) saveToDatabase(entry LogEntry, tx *sql.Tx) error {
 
 	// 1. 检查并插入会话记录
 	var sessionExists bool
-	err = tx.QueryRow("SELECT EXISTS(SELECT 1 FROM sessions WHERE session_id = $1)", entry.SessionID).Scan(&sessionExists)
+	err = tx.QueryRow("SELECT EXISTS(SELECT 1 FROM opsagent.sessions WHERE session_id = $1)", entry.SessionID).Scan(&sessionExists)
 	if err != nil {
+		al.logger.Error("检查会话记录失败",
+			zap.Error(err),
+			zap.String("session_id", entry.SessionID.String()),
+		)
 		return fmt.Errorf("检查会话记录失败: %w", err)
 	}
 
 	if !sessionExists {
+		al.logger.Debug("会话记录不存在，准备插入",
+			zap.String("session_id", entry.SessionID.String()),
+		)
+
 		_, err = tx.Exec(
-			"INSERT INTO sessions (session_id, user_id, client_ip, user_agent) VALUES ($1, $2, $3, $4)",
+			"INSERT INTO opsagent.sessions (session_id, user_id, client_ip, user_agent) VALUES ($1, $2, $3, $4)",
 			entry.SessionID, entry.UserID, entry.ClientIP, entry.UserAgent,
 		)
 		if err != nil {
+			al.logger.Error("插入会话记录失败",
+				zap.Error(err),
+				zap.String("session_id", entry.SessionID.String()),
+			)
 			return fmt.Errorf("插入会话记录失败: %w", err)
 		}
 	}
 
 	// 2. 插入交互记录
-	_, err = tx.Exec(
-		`INSERT INTO interactions
+	al.logger.Debug("准备插入交互记录",
+		zap.String("interaction_id", entry.InteractionID.String()),
+		zap.String("question", entry.Question),
+		zap.String("model_name", entry.ModelName),
+		zap.String("provider", entry.Provider),
+		zap.String("base_url", entry.BaseURL),
+		zap.String("cluster", entry.Cluster),
+		zap.String("status", entry.Status),
+		zap.Duration("total_duration", entry.TotalDuration),
+		zap.Duration("assistant_duration", entry.AssistantDuration),
+		zap.Duration("parse_duration", entry.ParseDuration),
+	)
+
+	// 构建 SQL 语句
+	sql := `INSERT INTO opsagent.interactions
         (interaction_id, session_id, question, model_name, provider, base_url, cluster, final_answer, status,
         total_duration_ms, assistant_duration_ms, parse_duration_ms)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-		entry.InteractionID, entry.SessionID, entry.Question, entry.ModelName, entry.Provider, entry.BaseURL,
-		entry.Cluster, entry.FinalAnswer, entry.Status,
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`
+
+	// 准备参数
+	params := []interface{}{
+		entry.InteractionID,
+		entry.SessionID,
+		entry.Question,
+		entry.ModelName,
+		entry.Provider,
+		entry.BaseURL,
+		entry.Cluster,
+		entry.FinalAnswer,
+		entry.Status,
 		int(entry.TotalDuration.Milliseconds()),
 		int(entry.AssistantDuration.Milliseconds()),
 		int(entry.ParseDuration.Milliseconds()),
+	}
+
+	// 输出参数值
+	al.logger.Debug("插入交互记录参数",
+		zap.String("sql", sql),
+		zap.Any("params", params),
 	)
+
+	_, err = tx.Exec(sql, params...)
 	if err != nil {
+		al.logger.Error("插入交互记录失败",
+			zap.Error(err),
+			zap.String("interaction_id", entry.InteractionID.String()),
+		)
 		return fmt.Errorf("插入交互记录失败: %w", err)
 	}
 
 	// 3. 插入思考过程
+	al.logger.Debug("检查思考过程",
+		zap.String("interaction_id", entry.InteractionID.String()),
+		zap.String("thought", entry.Thought),
+		zap.Bool("is_empty", entry.Thought == ""),
+		zap.Int("thought_length", len(entry.Thought)),
+	)
+
 	if entry.Thought != "" {
+		al.logger.Debug("准备插入思考过程",
+			zap.String("interaction_id", entry.InteractionID.String()),
+			zap.String("thought", entry.Thought),
+		)
+
 		_, err = tx.Exec(
-			"INSERT INTO thoughts (interaction_id, thought) VALUES ($1, $2)",
+			"INSERT INTO opsagent.thoughts (interaction_id, thought) VALUES ($1, $2)",
 			entry.InteractionID, entry.Thought,
 		)
 		if err != nil {
+			al.logger.Error("插入思考过程失败",
+				zap.Error(err),
+				zap.String("interaction_id", entry.InteractionID.String()),
+			)
 			return fmt.Errorf("插入思考过程失败: %w", err)
+		} else {
+			al.logger.Info("插入思考过程成功",
+				zap.String("interaction_id", entry.InteractionID.String()),
+				zap.Int("thought_length", len(entry.Thought)),
+			)
 		}
+	} else {
+		al.logger.Warn("思考过程为空，跳过插入",
+			zap.String("interaction_id", entry.InteractionID.String()),
+		)
 	}
 
 	// 4. 插入工具调用记录
-	for _, tool := range entry.ToolCalls {
-		_, err = tx.Exec(
-			`INSERT INTO tool_calls
-            (interaction_id, tool_name, tool_input, tool_observation, sequence_number, duration_ms)
-            VALUES ($1, $2, $3, $4, $5, $6)`,
-			entry.InteractionID, tool.Name, tool.Input, tool.Observation, tool.SequenceNum,
-			int(tool.Duration.Milliseconds()),
+	al.logger.Debug("检查工具调用记录",
+		zap.String("interaction_id", entry.InteractionID.String()),
+		zap.Int("tool_calls_count", len(entry.ToolCalls)),
+		zap.Bool("is_empty", len(entry.ToolCalls) == 0),
+	)
+
+	if len(entry.ToolCalls) == 0 {
+		al.logger.Warn("工具调用记录为空，跳过插入",
+			zap.String("interaction_id", entry.InteractionID.String()),
 		)
-		if err != nil {
-			return fmt.Errorf("插入工具调用记录失败: %w", err)
+	} else {
+		al.logger.Debug("准备插入工具调用记录",
+			zap.String("interaction_id", entry.InteractionID.String()),
+			zap.Int("tool_calls_count", len(entry.ToolCalls)),
+		)
+
+		for i, tool := range entry.ToolCalls {
+			al.logger.Debug(fmt.Sprintf("准备插入第 %d 个工具调用", i),
+				zap.String("name", tool.Name),
+				zap.String("input", tool.Input),
+				zap.String("observation", tool.Observation),
+				zap.Int("sequence_num", tool.SequenceNum),
+				zap.Duration("duration", tool.Duration),
+			)
+
+			_, err = tx.Exec(
+				`INSERT INTO opsagent.tool_calls
+                (interaction_id, tool_name, tool_input, tool_observation, sequence_number, duration_ms)
+                VALUES ($1, $2, $3, $4, $5, $6)`,
+				entry.InteractionID, tool.Name, tool.Input, tool.Observation, tool.SequenceNum,
+				int(tool.Duration.Milliseconds()),
+			)
+			if err != nil {
+				al.logger.Error("插入工具调用记录失败",
+					zap.Error(err),
+					zap.String("interaction_id", entry.InteractionID.String()),
+					zap.String("tool_name", tool.Name),
+				)
+				return fmt.Errorf("插入工具调用记录失败: %w", err)
+			} else {
+				al.logger.Info(fmt.Sprintf("插入第 %d 个工具调用成功", i),
+					zap.String("interaction_id", entry.InteractionID.String()),
+					zap.String("tool_name", tool.Name),
+				)
+			}
 		}
 	}
 
 	// 5. 插入性能指标
-	for name, duration := range entry.PerfMetrics {
-		_, err = tx.Exec(
-			"INSERT INTO performance_metrics (interaction_id, metric_name, duration_ms) VALUES ($1, $2, $3)",
-			entry.InteractionID, name, int(duration.Milliseconds()),
+	al.logger.Debug("检查性能指标",
+		zap.String("interaction_id", entry.InteractionID.String()),
+		zap.Int("perf_metrics_count", len(entry.PerfMetrics)),
+		zap.Bool("is_empty", len(entry.PerfMetrics) == 0),
+	)
+
+	if len(entry.PerfMetrics) == 0 {
+		al.logger.Warn("性能指标为空，跳过插入",
+			zap.String("interaction_id", entry.InteractionID.String()),
 		)
-		if err != nil {
-			return fmt.Errorf("插入性能指标失败: %w", err)
+	} else {
+		al.logger.Debug("准备插入性能指标",
+			zap.String("interaction_id", entry.InteractionID.String()),
+			zap.Int("perf_metrics_count", len(entry.PerfMetrics)),
+		)
+
+		// 输出所有性能指标
+		var metricNames []string
+		for name := range entry.PerfMetrics {
+			metricNames = append(metricNames, name)
+		}
+		al.logger.Debug("所有性能指标名称",
+			zap.Strings("metric_names", metricNames),
+		)
+
+		for name, duration := range entry.PerfMetrics {
+			al.logger.Debug(fmt.Sprintf("准备插入性能指标: %s", name),
+				zap.Duration("duration", duration),
+				zap.Int("duration_ms", int(duration.Milliseconds())),
+			)
+
+			_, err = tx.Exec(
+				"INSERT INTO opsagent.performance_metrics (interaction_id, metric_name, duration_ms) VALUES ($1, $2, $3)",
+				entry.InteractionID, name, int(duration.Milliseconds()),
+			)
+			if err != nil {
+				al.logger.Error("插入性能指标失败",
+					zap.Error(err),
+					zap.String("interaction_id", entry.InteractionID.String()),
+					zap.String("metric_name", name),
+				)
+				return fmt.Errorf("插入性能指标失败: %w", err)
+			} else {
+				al.logger.Info(fmt.Sprintf("插入性能指标成功: %s", name),
+					zap.String("interaction_id", entry.InteractionID.String()),
+					zap.Duration("duration", duration),
+				)
+			}
 		}
 	}
 
@@ -603,7 +813,7 @@ func (al *AuditLogger) cleanup() {
 	defer tx.Rollback()
 
 	// 查询过期的交互ID
-	rows, err := tx.Query("SELECT interaction_id FROM interactions WHERE created_at < $1", cutoffDate)
+	rows, err := tx.Query("SELECT interaction_id FROM opsagent.interactions WHERE created_at < $1", cutoffDate)
 	if err != nil {
 		al.logger.Error("查询过期交互记录失败", zap.Error(err))
 		return
@@ -635,7 +845,7 @@ func (al *AuditLogger) cleanup() {
 	// 删除相关记录
 	tables := []string{"performance_metrics", "tool_calls", "thoughts", "interactions"}
 	for _, table := range tables {
-		query := fmt.Sprintf("DELETE FROM %s WHERE interaction_id IN (%s)", table, placeholders)
+		query := fmt.Sprintf("DELETE FROM opsagent.%s WHERE interaction_id IN (%s)", table, placeholders)
 		_, err := tx.Exec(query, interactionIDs...)
 		if err != nil {
 			al.logger.Error("删除过期记录失败",

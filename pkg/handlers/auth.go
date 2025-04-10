@@ -12,7 +12,7 @@ import (
 
 const (
 	DEFAULT_USERNAME = "admin"
-	DEFAULT_PASSWORD = "novastar"
+	DEFAULT_PASSWORD = "AqA-dqR2@GGJ,8fjz%=6%Ehrv"
 )
 
 // LoginRequest 登录请求结构
