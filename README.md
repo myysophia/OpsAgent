@@ -449,4 +449,15 @@ kubectl get pods/node/deploy/statefulset  -o json
 kubectl --context="ask-cn" --kubeconfig=./config get pods --field-selector spec.nodeName=cn -o custom-columns='NAME:.metadata.name,IMAGE:.spec.containers[*].image' --no-headers | grep 'vnnox-middle-device-management'
 ```
 根据这个命令，很明显LLM理解错了，而且还没有继续寻找答案，而是直接返回了。
+14. RAG 的返回装填有些问题
+已经500/400 了最后返回还是200导致误判 @ 2025年04月11日10:31:06
+15. LLM输出的结果是正确的，但是工具解析失败了，导致无法查询
+解决: LLM返回的json格式并不是非常的标准， 那么应该有回退机制，当整个json不可解析时，尝试局部解析json，只需要提取action部分即可
+@ 2025年04月11日10:34:45 
+```bahs
+2025-04-11T10:31:29.897+0800    DEBUG   handlers/execute.go:425 第一轮对话完成  {"duration": "11.067594956s", "response": "```json\n{\n  \"question\": \"查询储能中国节点rocketmq 的域名是什么？\",\n  \"thought\": \"用户需要查询 'rocketmq' 相关的域名信息。由于问题中提到“域名”，优先查询 ingress 资源进行匹配。此外，表格中没有直接与 rocketmq 对应的资源名称或关键字，因此需要使用模糊匹配工具来查找相关资源。\",\n  \"action\": {\n    \"name\": \"kubectl\",\n    \"input\": \"get ingress --no-headers -o custom-columns='HOST:.spec.rules[*].host' | grep -i 'rocketmq'\"\n  },\n  \"observation\": \"\",\n  \"final_answer\": \"正在查询 rocketmq 相关的域名信息。如果未找到相关信息，请确认是否正确配置了对应服务的 ingress 资源，或者提供更多线索以便进一步排查。\"\n}\n```"}
+2025-04-11T10:31:29.897+0800    DEBUG   assistants/simple.go:364        开始计时操作    {"operation": "assistant_parse_tool_prompt", "start_time": "2025-04-11T10:31:29.897+0800"}
+2025-04-11T10:31:29.897+0800    DEBUG   assistants/simple.go:369        完成计时操作    {"operation": "assistant_parse_tool_prompt", "elapsed": "14.782µs"}
+2025-04-11T10:31:29.897+0800    DEBUG   handlers/execute.go:425 解析工具提示失败        {"duration": "14.782µs", "error": "invalid character '`' looking for beginning of value"} 
+```
 ## releaseNote
