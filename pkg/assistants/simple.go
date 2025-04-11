@@ -3,12 +3,13 @@ package assistants
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
+
 	"github.com/myysophia/OpsAgent/pkg/llms"
 	"github.com/myysophia/OpsAgent/pkg/tools"
 	"github.com/myysophia/OpsAgent/pkg/utils"
 	"github.com/sashabaranov/go-openai"
 	"go.uber.org/zap"
-	"strings"
 )
 
 var logger *zap.Logger
@@ -21,6 +22,12 @@ func init() {
 const (
 	defaultMaxIterations = 5
 )
+
+// Action 表示工具调用的动作
+type Action struct {
+	Name  string `json:"name"`
+	Input string `json:"input"`
+}
 
 // Assistant is the simplest AI assistant.
 //func Assistant(model string, prompts []openai.ChatCompletionMessage, maxTokens int, countTokens bool, verbose bool, maxIterations int) (result string, chatHistory []openai.ChatCompletionMessage, err error) {
@@ -364,27 +371,69 @@ func AssistantWithConfig(model string, prompts []openai.ChatCompletionMessage, m
 	perfStats.StartTimer("assistant_parse_tool_prompt")
 
 	var toolPrompt tools.ToolPrompt
-	if err = json.Unmarshal([]byte(resp), &toolPrompt); err != nil {
-		// 停止解析工具提示计时
-		parseDuration := perfStats.StopTimer("assistant_parse_tool_prompt")
-		logger.Debug("解析工具提示失败",
-			zap.Duration("duration", parseDuration),
-			zap.Error(err),
-		)
+	var action Action
 
-		if verbose {
-			logger.Warn("无法解析工具提示，假定为最终答案",
-				zap.Error(err),
-				zap.String("response", resp),
-			)
+	// 首先尝试解析完整的ToolPrompt
+	if err = json.Unmarshal([]byte(resp), &toolPrompt); err != nil {
+		// 如果完整解析失败，尝试只解析action部分
+		var actionOnly struct {
+			Action Action `json:"action"`
 		}
-		return resp, chatHistory, nil
+		if err = json.Unmarshal([]byte(resp), &actionOnly); err == nil && actionOnly.Action.Name != "" {
+			// 如果成功解析到action，构建完整的toolPrompt
+			toolPrompt = tools.ToolPrompt{
+				Action: actionOnly.Action,
+				// 设置默认值
+				Question:    "No question provided",
+				Thought:     "No thought provided",
+				Observation: "",
+				FinalAnswer: "",
+			}
+			logger.Debug("成功解析action部分",
+				zap.String("tool", toolPrompt.Action.Name),
+				zap.String("input", toolPrompt.Action.Input),
+			)
+		} else {
+			// 如果action解析也失败，尝试直接解析为Action
+			if err = json.Unmarshal([]byte(resp), &action); err == nil && action.Name != "" {
+				toolPrompt = tools.ToolPrompt{
+					Action: action,
+					// 设置默认值
+					Question:    "No question provided",
+					Thought:     "No thought provided",
+					Observation: "",
+					FinalAnswer: "",
+				}
+				logger.Debug("成功解析为Action",
+					zap.String("tool", toolPrompt.Action.Name),
+					zap.String("input", toolPrompt.Action.Input),
+				)
+			} else {
+				// 停止解析工具提示计时
+				parseDuration := perfStats.StopTimer("assistant_parse_tool_prompt")
+				logger.Debug("解析工具提示失败",
+					zap.Duration("duration", parseDuration),
+					zap.Error(err),
+					zap.String("response", resp),
+				)
+
+				if verbose {
+					logger.Warn("无法解析工具提示，假定为最终答案",
+						zap.Error(err),
+						zap.String("response", resp),
+					)
+				}
+				return resp, chatHistory, nil
+			}
+		}
 	}
 
 	// 停止解析工具提示计时
 	parseDuration := perfStats.StopTimer("assistant_parse_tool_prompt")
 	logger.Debug("解析工具提示成功",
 		zap.Duration("duration", parseDuration),
+		zap.String("tool", toolPrompt.Action.Name),
+		zap.String("input", toolPrompt.Action.Input),
 	)
 
 	iterations := 0
