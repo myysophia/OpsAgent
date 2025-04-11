@@ -62,8 +62,12 @@ const executeSystemPrompt_cn = `您是Kubernetes和云原生网络的技术专�
 | 工商储前端      | ems front                           | ems-front                             |
 | 家储后端服务     | 户储后端/energy management              | energy-management-service             |
 | 储能兼容服务     | 兼容服务/energy compatibility           | energy-compatibility                  |
-| 数字孪生       | digital twin                        | digital-twin-platform                 |
-| 低代码后端      | lowcode service/低代码 后端              | cloud-lowcode-service                 |
+| 储能数字孪生       | digital twin                        | digital-twin-platform                 |
+| 储能低代码后端      | lowcode service/低代码 后端              | cloud-lowcode-service                 |
+| 音量微服务/音量服务/音量      | volume              | vnnox-volume                 |
+| 亮度微服务/亮度服务/亮度      | brightness/bright              |     vnnox-brightness             |
+| 储能低代码后端      | lowcode service/低代码 后端              | cloud-lowcode-service                 |
+| 储能低代码后端      | lowcode service/低代码 后端              | cloud-lowcode-service                 |
 | mysql数据库   | mysql/vnnox mysql                   | vnnox-mysql                           |
 | redis数据库   | redis/vnnox redis                   | vnnox-redis                           |
 | mongo数据库   | mongo/vnnox mongo                   | vnnox-mongo                           |
@@ -88,6 +92,7 @@ const executeSystemPrompt_cn = `您是Kubernetes和云原生网络的技术专�
 
 严格约束：
 - 避免使用 -o json/yaml 全量输出，优先使用 jsonpath 、--go-template、 custom-columns 进行查询,注意用户输入都是模糊的,筛选时需要模糊匹配。
+- 禁止使用 --filed-seelectors 选项。
 - 使用 --no-headers 选项减少不必要的输出。
 - jq 表达式中，名称匹配必须使用 'test()'，避免使用 '=='。
 - 命令参数涉及特殊字符（如 []、()、"）时，优先使用单引号 ' 包裹，避免 Shell 解析错误。
@@ -95,6 +100,8 @@ const executeSystemPrompt_cn = `您是Kubernetes和云原生网络的技术专�
 - 当使用awk时使用单引号（如 '{print $1}'），避免双引号转义导致语法错误。
 - 当用户问题中包含"镜像版本、版本号、分支"时，优先使用kubectl get pods -o custom-columns='NAME:.metadata.name,IMAGE:.spec.containers[*].image' | grep '用户问题中的服务名称'。
 - 当用户问题中包含"域名、访问地址"时，优先查询ingress 资源进行匹配。
+- kubectl命令不指定namespace时，优先使用默认的namespace查询
+- 不要使用--field-selector spec.nodeName=xxx进行查询，忽略用户问题中的"节点、地区等概念".
 重要提示：始终使用以下 JSON 格式返回响应：
 {
   "question": "<用户的输入问题>",
@@ -347,48 +354,34 @@ func Execute(c *gin.Context) {
 		zap.String("apiKey", "***"),
 	)
 
-	// 检查是否是特定问题
-	isSpecialQuestion := strings.Contains(req.Args, "你是谁？") ||
-		strings.Contains(req.Args, "你可以干什么？") ||
-		strings.Contains(req.Args, "你都会什么？") // 如果不是特定问题，则调用RAG接口获取Kubernetes上下文
-	if !isSpecialQuestion {
-		// 获取适合的Kubernetes上下文
-		logger.Info("开始获取Kubernetes上下文", zap.String("args", req.Args))
-		err := getContextFromRAG(req.Args)
-		if err != nil {
-			logger.Error("RAG Flow 服务异常!", zap.Error(err))
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error":  fmt.Sprintf("RAG Flow 服务异常! %v", err),
-				"status": "error",
-				"message": fmt.Sprintf("无法获取你要查询的集群是哪一个？您可以这样问：\n\n"+
-					"中国节点%s\n"+
-					"储能中国节点%s\n"+
-					".......\n"+
-					"您是想查询哪个节点的信息呢？",
-					req.Args, req.Args),
-			})
-			return
-		}
+	// 获取适合的Kubernetes上下文
+	logger.Info("开始获取Kubernetes上下文", zap.String("args", req.Args))
+	err := getContextFromRAG(req.Args)
+	if err != nil {
+		logger.Error("RAG Flow 服务异常!", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":  fmt.Sprintf("RAG Flow 服务异常! %v", err),
+			"status": "error",
+			"message": fmt.Sprintf("无法获取你要查询的集群是哪一个？您可以这样问：\n\n"+
+				"中国节点%s\n"+
+				"储能中国节点%s\n"+
+				".......\n"+
+				"您是想查询哪个节点的信息呢？",
+				req.Args, req.Args),
+		})
+		return
+	}
 
-		// 检查上下文是否设置成功
-		logger.Info("获取Kubernetes上下文成功",
-			zap.String("current_context", currentKubeContext),
-		)
+	// 检查上下文是否设置成功
+	logger.Info("获取Kubernetes上下文成功",
+		zap.String("current_context", currentKubeContext),
+	)
 
-		// 如果上下文为空，设置一个默认值
-		if currentKubeContext == "" {
-			currentKubeContext = "ask-cn" // 设置一个默认值
-			tools.SetCurrentKubeContext(currentKubeContext)
-			logger.Warn("上下文为空，设置默认值", zap.String("default_context", currentKubeContext))
-		}
-	} else {
-		// 对于特定问题，设置一个默认上下文
-		currentKubeContext = "ask-cn"
+	// 如果上下文为空，设置一个默认值
+	if currentKubeContext == "" {
+		currentKubeContext = "ask-cn" // 设置一个默认值
 		tools.SetCurrentKubeContext(currentKubeContext)
-		logger.Info("特殊问题，使用默认上下文",
-			zap.String("default_context", currentKubeContext),
-			zap.String("question", req.Args),
-		)
+		logger.Warn("上下文为空，设置默认值", zap.String("default_context", currentKubeContext))
 	}
 
 	// 确定使用的模型
