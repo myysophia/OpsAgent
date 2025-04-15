@@ -460,4 +460,47 @@ kubectl --context="ask-cn" --kubeconfig=./config get pods --field-selector spec.
 2025-04-11T10:31:29.897+0800    DEBUG   assistants/simple.go:369        完成计时操作    {"operation": "assistant_parse_tool_prompt", "elapsed": "14.782µs"}
 2025-04-11T10:31:29.897+0800    DEBUG   handlers/execute.go:425 解析工具提示失败        {"duration": "14.782µs", "error": "invalid character '`' looking for beginning of value"} 
 ```
+返回的异常json如下
+```json
+{
+    "duration": "5.06251775s",
+    "error": "invalid character '`' looking for beginning of value",
+    "response": "```json\n{\n  \"question\": \"中国节点的设备管理有几个实例？负载如何？\",\n  \"thought\": \"用户想了解中国节点的设备管理服务实例数量及其负载情况。根据对照表，设备管理平台的关键字是 'device-management' 或 'device management'，对应的 Kubernetes 资源名称是 'vnnox-middle-device-management'。需要查询该服务的 Pod 数量以及负载（如 CPU 和内存使用率）。由于用户未明确命名空间，优先在默认命名空间中查询。\",\n  \"action\": {\n    \"name\": \"kubectl\",\n    \"input\": \"kubectl get pods --field-selector=status.phase=Running -o jsonpath='{range .items[?(@.metadata.name.test('vnnox-middle-device-management'))]}{.metadata.name}{'\\\\t'}{.spec.nodeName}{'\\\\n'}{end}'\"\n  },\n  \"observation\": \"\",\n  \"final_answer\": \"正在查询中国节点的设备管理服务实例数量及其负载情况。如果结果为空，可能是因为资源不在默认命名空间或无相关权限，请稍等进一步分析。\"\n}\n```"
+}
+```
+返回响应内容:
+```json
+{
+  "response_data": {
+    "message": "设备管理服务在中国节点共有 **5 个实例**，各实例的资源负载如下：\n\n| 实例名称                              | CPU 使用 (millicores) | 内存使用 (MiB) |\n|---------------------------------------|------------------------|----------------|\n| vnnox-middle-device-management-546549489-fk628 | 2431m                 | 6360Mi         |\n| vnnox-middle-device-management-546549489-ggx7s | 2527m                 | 5679Mi         |\n| vnnox-middle-device-management-546549489-l6d6n | 1913m                 | 6949Mi         |\n| vnnox-middle-device-management-546549489-m7498 | 1772m                 | 5366Mi         |\n| vnnox-middle-device-management-546549489-txnxh | 2051m                 | 7047Mi         |\n\n从数据来看，整体负载较为均衡，CPU 使用率在 1772m 到 2527m 之间，内存使用量在 5366Mi 到 7047Mi 之间。可以根据具体需求判断是否需要扩容或优化资源配置。",
+    "raw_response": true,
+    "status": "success",
+    "tools_history": [
+      {
+        "name": "kubectl",
+        "input": "kubectl get pods --field-selector=status.phase=Running -l app=vnnox-middle-device-management --no-headers -o custom-columns='NAME:.metadata.name'",
+        "observation": "",
+        "thought": "用户想了解设备管理服务在中国节点的实例数量和负载情况。根据对照表，设备管理平台的关键字为'device-management/device management'，对应的 Kubernetes 资源名称为 'vnnox-middle-device-management'。可以通过查询该资源的 Pod 数量来确定实例数，并通过查看相关指标（如 CPU 和内存使用率）评估负载情况。"
+      },
+      {
+        "name": "kubectl",
+        "input": "kubectl get pods --field-selector=status.phase=Running --no-headers -o custom-columns='NAME:.metadata.name' | grep -i 'vnnox-middle-device-management'",
+        "observation": "vnnox-middle-device-management-546549489-fk628\nvnnox-middle-device-management-546549489-ggx7s\nvnnox-middle-device-management-546549489-l6d6n\nvnnox-middle-device-management-546549489-m7498\nvnnox-middle-device-management-546549489-txnxh",
+        "thought": "上一步查询未成功返回结果，可能的原因包括标签筛选不匹配、资源不存在或命名空间问题。接下来可以尝试放宽筛选条件重新查询，例如直接基于资源名称模糊匹配运行中的 Pod，并确认指定的命名空间或者使用默认命名空间。"
+      },
+      {
+        "name": "kubectl",
+        "input": "kubectl top pods --no-headers | grep -i 'vnnox-middle-device-management'",
+        "observation": "vnnox-middle-device-management-546549489-fk628        2431m   6360Mi   \nvnnox-middle-device-management-546549489-ggx7s        2527m   5679Mi   \nvnnox-middle-device-management-546549489-l6d6n        1913m   6949Mi   \nvnnox-middle-device-management-546549489-m7498        1772m   5366Mi   \nvnnox-middle-device-management-546549489-txnxh        2051m   7047Mi",
+        "thought": "通过查询，我们找到了 5 个运行中的 Pod 实例，表明设备管理服务当前在中国节点有 5 个实例。接下来可以通过查询这些 Pod 的资源使用情况（如 CPU 和内存）来评估负载。这需要使用 kubectl top 命令获取指标。"
+      }
+    ]
+  },
+  "show_thought": true,
+  "thought": ""
+}
+```
+2025年04月15日21:56:06 LLM返回的内容有markdown标记导致解析tool报错，优化prompt来避免
+2025年04月15日21:57:21 LLM返回的tool 执行失败，报错扔给让lLM再重新修正，直到最大迭代次数。
+
 ## releaseNote
