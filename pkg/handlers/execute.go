@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -48,6 +47,7 @@ type ToolHistory struct {
 	Name        string `json:"name"`
 	Input       string `json:"input"`
 	Observation string `json:"observation"`
+	Thought     string `json:"thought"`
 }
 
 const executeSystemPrompt_cn = `您是Kubernetes和云原生网络的技术专家，您的任务是遵循链式思维方法，确保彻底性和准确性，同时遵守约束。
@@ -471,12 +471,14 @@ func Execute(c *gin.Context) {
 					name, _ := action["name"].(string)
 					input, _ := action["input"].(string)
 					observation, _ := toolPrompt["observation"].(string)
+					thought, _ := toolPrompt["thought"].(string)
 
 					if name != "" && input != "" {
 						logger.Debug("添加工具调用",
 							zap.String("name", name),
 							zap.String("input", input),
 							zap.String("observation", observation),
+							zap.String("thought", thought),
 						)
 
 						// 添加到工具历史
@@ -484,6 +486,7 @@ func Execute(c *gin.Context) {
 							Name:        name,
 							Input:       input,
 							Observation: observation,
+							Thought:     thought,
 						})
 
 						// 添加到审计工具调用
@@ -491,6 +494,7 @@ func Execute(c *gin.Context) {
 							zap.String("name", name),
 							zap.String("input", input),
 							zap.String("observation", observation),
+							zap.String("thought", thought),
 							zap.Int("sequence_num", len(auditToolCalls)),
 						)
 
@@ -592,6 +596,16 @@ func Execute(c *gin.Context) {
 				responseData["tools_history"] = toolsHistory
 			}
 
+			// 将审计数据存入上下文
+			c.Set("audit_data", responseData)
+
+			// 记录响应内容
+			logger.Debug("返回响应内容",
+				zap.Any("response_data", responseData),
+				zap.Bool("show_thought", showThought),
+				zap.String("thought", thought),
+			)
+
 			c.JSON(http.StatusOK, responseData)
 			return
 		}
@@ -622,6 +636,16 @@ func Execute(c *gin.Context) {
 				responseData["observation"] = aiResp.Observation
 				responseData["tools_history"] = toolsHistory
 			}
+
+			// 将审计数据存入上下文
+			c.Set("audit_data", responseData)
+
+			// 记录响应内容
+			logger.Debug("返回响应内容",
+				zap.Any("response_data", responseData),
+				zap.Bool("show_thought", showThought),
+				zap.String("thought", aiResp.Thought),
+			)
 
 			c.JSON(http.StatusOK, responseData)
 			return
@@ -673,6 +697,16 @@ func Execute(c *gin.Context) {
 					responseData["tools_history"] = toolsHistory
 				}
 
+				// 将审计数据存入上下文
+				c.Set("audit_data", responseData)
+
+				// 记录响应内容
+				logger.Debug("返回响应内容",
+					zap.Any("response_data", responseData),
+					zap.Bool("show_thought", showThought),
+					zap.String("thought", thought),
+				)
+
 				c.JSON(http.StatusOK, responseData)
 				return
 			}
@@ -694,6 +728,16 @@ func Execute(c *gin.Context) {
 			responseData["tools_history"] = toolsHistory
 		}
 
+		// 将审计数据存入上下文
+		c.Set("audit_data", responseData)
+
+		// 记录响应内容
+		logger.Debug("返回响应内容",
+			zap.Any("response_data", responseData),
+			zap.Bool("show_thought", showThought),
+			zap.String("thought", aiResp.Thought),
+		)
+
 		c.JSON(http.StatusOK, responseData)
 		return
 	}
@@ -705,6 +749,7 @@ func Execute(c *gin.Context) {
 
 	// 获取性能指标
 	perfMetrics := perfStats.GetTimers()
+	_ = perfMetrics // 使用_来避免未使用变量的警告
 
 	// 获取会话和交互ID
 	var sessionID, interactionID uuid.UUID
@@ -731,180 +776,16 @@ func Execute(c *gin.Context) {
 			"status":  "success",
 		}
 
-		// 根据showThought配置决定是否返回思考过程和工具历史
+		// 根据showThought配置决定是否返回工具历史
 		if showThought {
-			responseData["thought"] = aiResp.Thought
-			responseData["question"] = aiResp.Question
-			responseData["action"] = aiResp.Action
-			responseData["observation"] = aiResp.Observation
 			responseData["tools_history"] = toolsHistory
 		}
 
-		// 获取日志记录器
-		logger := utils.GetLogger().Named("execute-handler")
-
-		// 输出工具调用信息
-		logger.Debug("工具调用信息",
-			zap.Int("audit_tool_calls_count", len(auditToolCalls)),
+		// 记录响应内容
+		logger.Debug("返回响应内容",
+			zap.Any("response_data", responseData),
+			zap.Bool("show_thought", showThought),
 		)
-		for i, tool := range auditToolCalls {
-			logger.Debug(fmt.Sprintf("工具调用 %d", i),
-				zap.String("name", tool.Name),
-				zap.String("input", tool.Input),
-				zap.Int("sequence_num", tool.SequenceNum),
-				zap.Duration("duration", tool.Duration),
-			)
-		}
-
-		// 输出性能指标信息
-		logger.Debug("性能指标信息",
-			zap.Any("perf_metrics", perfMetrics),
-			zap.Duration("assistant_duration", assistantDuration),
-			zap.Duration("parse_duration", parseDuration),
-		)
-
-		// 检查关键字段
-		logger.Debug("检查关键字段",
-			zap.String("execute_model", executeModel),
-			zap.Bool("execute_model_empty", executeModel == ""),
-			zap.String("provider", req.Provider),
-			zap.Bool("provider_empty", req.Provider == ""),
-			zap.String("base_url", req.BaseUrl),
-			zap.Bool("base_url_empty", req.BaseUrl == ""),
-			zap.String("cluster", req.Cluster),
-			zap.Bool("cluster_empty", req.Cluster == ""),
-		)
-
-		// 确保关键字段不为空
-		if executeModel == "" {
-			executeModel = "gpt-3.5-turbo"
-			logger.Warn("模型名称为空，使用默认值", zap.String("model_name", executeModel))
-		}
-
-		// 检查思考过程
-		logger.Debug("检查思考过程",
-			zap.String("thought", aiResp.Thought),
-			zap.Int("thought_length", len(aiResp.Thought)),
-			zap.Bool("thought_empty", aiResp.Thought == ""),
-		)
-
-		// 确保思考过程不为空
-		if aiResp.Thought == "" {
-			aiResp.Thought = "No thought process available"
-			logger.Warn("思考过程为空，使用默认值", zap.String("thought", aiResp.Thought))
-		}
-
-		// 准备审计数据
-		logger.Debug("准备审计数据",
-			zap.String("model_name", executeModel),
-			zap.String("provider", req.Provider),
-			zap.String("base_url", req.BaseUrl),
-			zap.String("cluster", req.Cluster),
-			zap.String("thought", aiResp.Thought),
-			zap.Int("thought_length", len(aiResp.Thought)),
-			zap.Int("tool_calls_count", len(auditToolCalls)),
-			zap.Int("perf_metrics_count", len(perfMetrics)),
-		)
-
-		// 输出工具调用信息
-		for i, tool := range auditToolCalls {
-			logger.Debug(fmt.Sprintf("工具调用 %d", i),
-				zap.String("name", tool.Name),
-				zap.String("input", tool.Input),
-				zap.String("observation", tool.Observation),
-				zap.Int("sequence_num", tool.SequenceNum),
-				zap.Duration("duration", tool.Duration),
-			)
-		}
-
-		// 输出性能指标信息
-		var metricNames []string
-		for name := range perfMetrics {
-			metricNames = append(metricNames, name)
-		}
-		logger.Debug("所有性能指标名称",
-			zap.Strings("metric_names", metricNames),
-			zap.Int("perf_metrics_count", len(perfMetrics)),
-		)
-
-		// 确保性能指标不为空
-		if len(perfMetrics) == 0 {
-			// 添加一个虚拟的性能指标，确保表不为空
-			perfMetrics = map[string]time.Duration{
-				"total_execution_time": 1000 * time.Millisecond,
-			}
-			logger.Warn("性能指标为空，添加虚拟性能指标",
-				zap.Int("perf_metrics_count", len(perfMetrics)),
-			)
-		}
-
-		for name, duration := range perfMetrics {
-			logger.Debug(fmt.Sprintf("性能指标: %s", name),
-				zap.Duration("duration", duration),
-				zap.Int("duration_ms", int(duration.Milliseconds())),
-			)
-		}
-
-		// 确保所有字段都有值
-		if req.Provider == "" {
-			req.Provider = "openai"
-			logger.Warn("提供商为空，使用默认值", zap.String("provider", req.Provider))
-		}
-
-		if req.BaseUrl == "" {
-			req.BaseUrl = "https://api.openai.com"
-			logger.Warn("BaseURL为空，使用默认值", zap.String("base_url", req.BaseUrl))
-		}
-
-		if req.Cluster == "" {
-			req.Cluster = "default"
-			logger.Warn("集群为空，使用默认值", zap.String("cluster", req.Cluster))
-		}
-
-		if aiResp.FinalAnswer == "" {
-			aiResp.FinalAnswer = "No final answer available"
-			logger.Warn("最终答案为空，使用默认值", zap.String("final_answer", aiResp.FinalAnswer))
-		}
-
-		// 创建审计数据
-		auditData := map[string]interface{}{
-			"question":           req.Instructions,
-			"model_name":         executeModel,
-			"provider":           req.Provider,
-			"base_url":           req.BaseUrl,
-			"cluster":            req.Cluster,
-			"thought":            aiResp.Thought,
-			"final_answer":       aiResp.FinalAnswer,
-			"status":             "success",
-			"tool_calls":         auditToolCalls,
-			"perf_metrics":       perfMetrics,
-			"assistant_duration": assistantDuration,
-			"parse_duration":     parseDuration,
-		}
-
-		// 检查审计数据是否完整
-		logger.Debug("检查审计数据是否完整",
-			zap.Bool("has_question", auditData["question"] != nil),
-			zap.Bool("has_model_name", auditData["model_name"] != nil),
-			zap.Bool("has_provider", auditData["provider"] != nil),
-			zap.Bool("has_base_url", auditData["base_url"] != nil),
-			zap.Bool("has_cluster", auditData["cluster"] != nil),
-			zap.Bool("has_thought", auditData["thought"] != nil),
-			zap.Bool("has_final_answer", auditData["final_answer"] != nil),
-			zap.Bool("has_status", auditData["status"] != nil),
-			zap.Bool("has_tool_calls", auditData["tool_calls"] != nil),
-			zap.Bool("has_perf_metrics", auditData["perf_metrics"] != nil),
-			zap.Bool("has_assistant_duration", auditData["assistant_duration"] != nil),
-			zap.Bool("has_parse_duration", auditData["parse_duration"] != nil),
-		)
-
-		// 输出审计数据
-		logger.Debug("设置审计数据",
-			zap.Any("audit_data", auditData),
-		)
-
-		// 将审计数据存入上下文
-		c.Set("audit_data", auditData)
 
 		c.JSON(http.StatusOK, responseData)
 	} else {
@@ -913,33 +794,16 @@ func Execute(c *gin.Context) {
 			"status":  "processing",
 		}
 
-		// 根据showThought配置决定是否返回思考过程和工具历史
+		// 根据showThought配置决定是否返回工具历史
 		if showThought {
-			responseData["thought"] = aiResp.Thought
-			responseData["question"] = aiResp.Question
-			responseData["action"] = aiResp.Action
-			responseData["observation"] = aiResp.Observation
 			responseData["tools_history"] = toolsHistory
 		}
 
-		// 准备审计数据
-		auditData := map[string]interface{}{
-			"question":           req.Instructions,
-			"model_name":         executeModel,
-			"provider":           req.Provider,
-			"base_url":           req.BaseUrl,
-			"cluster":            req.Cluster,
-			"thought":            aiResp.Thought,
-			"final_answer":       "",
-			"status":             "processing",
-			"tool_calls":         auditToolCalls,
-			"perf_metrics":       perfMetrics,
-			"assistant_duration": assistantDuration,
-			"parse_duration":     parseDuration,
-		}
-
-		// 将审计数据存入上下文
-		c.Set("audit_data", auditData)
+		// 记录响应内容
+		logger.Debug("返回响应内容",
+			zap.Any("response_data", responseData),
+			zap.Bool("show_thought", showThought),
+		)
 
 		c.JSON(http.StatusOK, responseData)
 	}
