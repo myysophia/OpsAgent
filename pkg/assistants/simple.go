@@ -29,268 +29,6 @@ type Action struct {
 	Input string `json:"input"`
 }
 
-// Assistant is the simplest AI assistant.
-//func Assistant(model string, prompts []openai.ChatCompletionMessage, maxTokens int, countTokens bool, verbose bool, maxIterations int) (result string, chatHistory []openai.ChatCompletionMessage, err error) {
-//	logger.Info("开始执行 Assistant",
-//		zap.String("model", model),
-//		zap.Int("maxTokens", maxTokens),
-//		zap.Bool("countTokens", countTokens),
-//		zap.Bool("verbose", verbose),
-//		zap.Int("maxIterations", maxIterations),
-//	)
-//
-//	chatHistory = prompts
-//	if len(prompts) == 0 {
-//		logger.Error("提示信息为空")
-//		return "", nil, fmt.Errorf("prompts cannot be empty")
-//	}
-//
-//	client, err := llms.NewOpenAIClient("", "")
-//	if err != nil {
-//		logger.Error("创建 OpenAI 客户端失败",
-//			zap.Error(err),
-//		)
-//		return "", nil, fmt.Errorf("unable to get OpenAI client: %v", err)
-//	}
-//	//
-//	//defer func() {
-//	//	if countTokens {
-//	//		count := llms.NumTokensFromMessages(chatHistory, model)
-//	//		logger.Info("Token 统计",
-//	//			zap.Int("total_tokens", count),
-//	//		)
-//	//	}
-//	//}()
-//
-//	if verbose {
-//		logger.Debug("开始第一轮对话")
-//	}
-//
-//	resp, err := client.Chat(model, maxTokens, chatHistory)
-//	//cleanedResp := cleanJSON(resp)
-//	logger.Debug("清理后的响应",
-//		zap.String("response", resp),
-//	)
-//	if err != nil {
-//		logger.Error("对话完成失败",
-//			zap.Error(err),
-//		)
-//		return "", chatHistory, fmt.Errorf("chat completion error: %v", err)
-//	}
-//
-//	chatHistory = append(chatHistory, openai.ChatCompletionMessage{
-//		Role:    openai.ChatMessageRoleAssistant,
-//		Content: string(resp),
-//	})
-//
-//	if verbose {
-//		logger.Debug("LLM 初始响应",
-//			zap.String("response", resp),
-//		)
-//	}
-//
-//	var toolPrompt tools.ToolPrompt
-//	if err = json.Unmarshal([]byte(resp), &toolPrompt); err != nil {
-//		if verbose {
-//			logger.Warn("无法解析工具提示，假定为最终答案",
-//				zap.Error(err),
-//				zap.String("response", resp),
-//			)
-//		}
-//		return resp, chatHistory, nil
-//	}
-//
-//	iterations := 0
-//	if maxIterations <= 0 {
-//		maxIterations = defaultMaxIterations
-//	}
-//	for {
-//		iterations++
-//		logger.Debug("开始新的迭代",
-//			zap.Int("iteration", iterations),
-//			zap.String("thought", toolPrompt.Thought),
-//		)
-//
-//		// 记录每次迭代的思考过程
-//		if verbose {
-//			logger.Info("LLM思考过程",
-//				zap.Int("iteration", iterations),
-//				zap.String("thought", toolPrompt.Thought),
-//				zap.String("question", toolPrompt.Question),
-//				zap.Any("action", toolPrompt.Action),
-//				zap.String("observation", toolPrompt.Observation),
-//			)
-//		}
-//
-//		if verbose {
-//			logger.Debug("思考过程",
-//				zap.String("thought", toolPrompt.Thought),
-//			)
-//		}
-//
-//		if iterations > maxIterations {
-//			logger.Warn("达到最大迭代次数",
-//				zap.Int("maxIterations", maxIterations),
-//			)
-//			return toolPrompt.FinalAnswer, chatHistory, nil
-//		}
-//
-//		// 检查final_answer是否为有效值（不是模板或占位符）
-//		if toolPrompt.FinalAnswer != "" && !isTemplateValue(toolPrompt.FinalAnswer) {
-//			logger.Info("获得最终答案",
-//				zap.String("finalAnswer", toolPrompt.FinalAnswer),
-//			)
-//			if verbose {
-//				logger.Debug("最终答案",
-//					zap.String("finalAnswer", toolPrompt.FinalAnswer),
-//				)
-//			}
-//			return toolPrompt.FinalAnswer, chatHistory, nil
-//		}
-//
-//		if toolPrompt.Action.Name != "" {
-//			var observation string
-//			logger.Debug("执行工具",
-//				zap.String("tool", toolPrompt.Action.Name),
-//				zap.String("input", toolPrompt.Action.Input),
-//			)
-//
-//			if verbose {
-//				logger.Debug("执行工具迭代",
-//					zap.Int("iteration", iterations),
-//					zap.String("tool", toolPrompt.Action.Name),
-//				)
-//				logger.Debug("工具输入",
-//					zap.String("tool", toolPrompt.Action.Name),
-//					zap.String("input", toolPrompt.Action.Input),
-//				)
-//			}
-//
-//			if toolFunc, ok := tools.CopilotTools[toolPrompt.Action.Name]; ok {
-//				ret, err := toolFunc(toolPrompt.Action.Input)
-//				observation = strings.TrimSpace(ret)
-//				if err != nil {
-//					logger.Error("工具执行失败",
-//						zap.String("tool", toolPrompt.Action.Name),
-//						zap.Error(err),
-//					)
-//					observation = fmt.Sprintf("Tool %s failed with error %s. Considering refine the inputs for the tool.", toolPrompt.Action.Name, ret)
-//				} else {
-//					logger.Debug("工具执行成功",
-//						zap.String("tool", toolPrompt.Action.Name),
-//						zap.String("observation", observation),
-//					)
-//					// 检查执行结果是否为空
-//					if observation == "" {
-//						toolPrompt.FinalAnswer = "我的模型是:" + model + "你的问题我好像没理解,你可以重新问我一次，我保证认真回答或者试试其他模型吧!"
-//						assistantMessage, _ := json.Marshal(toolPrompt)
-//						chatHistory = append(chatHistory, openai.ChatCompletionMessage{
-//							Role:    openai.ChatMessageRoleAssistant,
-//							Content: string(assistantMessage),
-//						})
-//						return toolPrompt.FinalAnswer, chatHistory, nil
-//					}
-//				}
-//			} else {
-//				logger.Warn("工具不可用",
-//					zap.String("tool", toolPrompt.Action.Name),
-//				)
-//				observation = fmt.Sprintf("Tool %s is not available. Considering switch to other supported tools.", toolPrompt.Action.Name)
-//			}
-//
-//			if verbose {
-//				logger.Debug("工具执行结果",
-//					zap.String("observation", observation),
-//				)
-//			}
-//
-//			// Constrict the prompt to the max tokens allowed by the model.
-//			// This is required because the tool may have generated a long output.
-//			observation = llms.ConstrictPrompt(observation, model, 1024)
-//			toolPrompt.Observation = observation
-//			assistantMessage, _ := json.Marshal(toolPrompt)
-//			chatHistory = append(chatHistory, openai.ChatCompletionMessage{
-//				Role:    openai.ChatMessageRoleUser,
-//				Content: string(assistantMessage),
-//			})
-//			// Constrict the chat history to the max tokens allowed by the model.
-//			// This is required because the chat history may have grown too large.
-//			//chatHistory = llms.ConstrictMessages(chatHistory, model, maxTokens)
-//
-//			// Start next iteration of LLM chat.
-//			if verbose {
-//				logger.Debug("开始新一轮对话",
-//					zap.Int("iteration", iterations),
-//				)
-//			}
-//
-//			resp, err := client.Chat(model, maxTokens, chatHistory)
-//			if err != nil {
-//				logger.Error("对话完成失败",
-//					zap.Error(err),
-//				)
-//				return "", chatHistory, fmt.Errorf("chat completion error: %v", err)
-//			}
-//
-//			chatHistory = append(chatHistory, openai.ChatCompletionMessage{
-//				Role:    openai.ChatMessageRoleAssistant,
-//				Content: string(resp),
-//			})
-//			if verbose {
-//				logger.Debug("LLM 中间响应",
-//					zap.String("response", resp),
-//				)
-//			}
-//
-//			// extract the tool prompt from the LLM response.
-//			if err = json.Unmarshal([]byte(resp), &toolPrompt); err != nil {
-//				if verbose {
-//					logger.Warn("无法从 LLM 解析工具，总结最终答案",
-//						zap.Error(err),
-//					)
-//				}
-//
-//				chatHistory = append(chatHistory, openai.ChatCompletionMessage{
-//					Role:    openai.ChatMessageRoleUser,
-//					Content: "Summarize all the chat history and respond to original question with final answer",
-//				})
-//
-//				resp, err = client.Chat(model, maxTokens, chatHistory)
-//				if err != nil {
-//					logger.Error("总结对话失败",
-//						zap.Error(err),
-//					)
-//					return "", chatHistory, fmt.Errorf("chat completion error: %v", err)
-//				}
-//
-//				logger.Info("完成总结",
-//					zap.String("summary", resp),
-//				)
-//
-//				// 尝试从响应中提取final_answer并处理格式
-//				// 这里处理LLM返回的JSON响应，确保只返回final_answer部分
-//				var finalResponse map[string]interface{}
-//				if err := json.Unmarshal([]byte(resp), &finalResponse); err == nil {
-//					if finalAnswer, ok := finalResponse["final_answer"].(string); ok && finalAnswer != "" {
-//						logger.Info("成功提取final_answer",
-//							zap.String("final_answer", finalAnswer),
-//						)
-//						if err == nil {
-//							return string(resp), chatHistory, nil
-//						}
-//						// 如果JSON序列化失败，直接返回原始的final_answer
-//						return finalAnswer, chatHistory, nil
-//					}
-//				}
-//
-//				// 如果无法直接提取final_answer，尝试清理原始响应
-//				//cleanedResp := cleanJSON(resp)
-//				return resp, chatHistory, nil
-//			}
-//		}
-//	}
-//}
-
 func Assistant(model string, prompts []openai.ChatCompletionMessage, maxTokens int, countTokens bool, verbose bool, maxIterations int) (result string, chatHistory []openai.ChatCompletionMessage, err error) {
 	return AssistantWithConfig(model, prompts, maxTokens, countTokens, verbose, maxIterations, "", "")
 }
@@ -334,15 +72,6 @@ func AssistantWithConfig(model string, prompts []openai.ChatCompletionMessage, m
 		)
 		return "", nil, fmt.Errorf("unable to get OpenAI client: %v", err)
 	}
-	//
-	//defer func() {
-	//	if countTokens {
-	//		count := llms.NumTokensFromMessages(chatHistory, model)
-	//		logger.Info("Token 统计",
-	//			zap.Int("total_tokens", count),
-	//		)
-	//	}
-	//}()
 
 	// 开始第一轮对话计时
 	perfStats.StartTimer("assistant_first_chat")
@@ -501,34 +230,36 @@ func AssistantWithConfig(model string, prompts []openai.ChatCompletionMessage, m
 						zap.Error(err),
 						zap.Duration("duration", toolDuration),
 					)
-					observation = fmt.Sprintf("Tool %s failed with error %s. Considering refine the inputs for the tool.", toolPrompt.Action.Name, ret)
+					observation = fmt.Sprintf("Tool %s failed with error: %s. Please try using a different tool or refine the input parameters.", toolPrompt.Action.Name, ret)
+
+					// 将错误信息添加到对话历史中
+					toolPrompt.Observation = observation
+					assistantMessage, _ := json.Marshal(toolPrompt)
+					chatHistory = append(chatHistory, openai.ChatCompletionMessage{
+						Role:    openai.ChatMessageRoleUser,
+						Content: string(assistantMessage),
+					})
+
+					// 继续下一轮迭代
+					continue
 				} else {
 					logger.Debug("工具执行成功",
 						zap.String("tool", toolPrompt.Action.Name),
 						zap.String("observation", observation),
 						zap.Duration("duration", toolDuration),
 					)
-					// 检查执行结果是否为空
-					//if observation == "" {
-					//	toolPrompt.FinalAnswer = "我的模型是:" + model + "你的问题我好像没理解,你可以重新问我一次，我保证认真回答或者试试其他模型吧!"
-					//	assistantMessage, _ := json.Marshal(toolPrompt)
-					//	chatHistory = append(chatHistory, openai.ChatCompletionMessage{
-					//		Role:    openai.ChatMessageRoleAssistant,
-					//		Content: string(assistantMessage),
-					//	})
-					//	return toolPrompt.FinalAnswer, chatHistory, nil
-					//}
 				}
-			} else {
-				// 停止工具执行计时（工具不可用的情况）
-				toolDuration := perfStats.StopTimer("assistant_tool_" + toolPrompt.Action.Name)
-
-				logger.Warn("工具不可用",
-					zap.String("tool", toolPrompt.Action.Name),
-					zap.Duration("duration", toolDuration),
-				)
-				observation = fmt.Sprintf("Tool %s is not available. Considering switch to other supported tools.", toolPrompt.Action.Name)
 			}
+			//else {
+			//	// 停止工具执行计时（工具不可用的情况）
+			//	toolDuration := perfStats.StopTimer("assistant_tool_" + toolPrompt.Action.Name)
+			//
+			//	logger.Warn("工具不可用",
+			//		zap.String("tool", toolPrompt.Action.Name),
+			//		zap.Duration("duration", toolDuration),
+			//	)
+			//	observation = fmt.Sprintf("Tool %s is not available. Considering switch to other supported tools.", toolPrompt.Action.Name)
+			//}
 
 			if verbose {
 				logger.Debug("工具执行结果",
@@ -653,7 +384,7 @@ func AssistantWithConfig(model string, prompts []openai.ChatCompletionMessage, m
 				logger.Debug("解析中间响应成功",
 					zap.Duration("duration", parseIntermediateDuration),
 				)
-				if toolPrompt.FinalAnswer != "" {
+				if toolPrompt.FinalAnswer != "" && toolPrompt.Observation != "" {
 					logger.Info("获得最终答案",
 						zap.String("finalAnswer", toolPrompt.FinalAnswer),
 					)
