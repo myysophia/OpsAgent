@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+    <style>
+        .component { fill: #fff; stroke: #333; stroke-width: 2; }
+        .component:hover { fill: #e1f5fe; cursor: pointer; }
+        .arrow { stroke: #666; stroke-width: 2; marker-end: url(#arrowhead); }
+        .label { font-family: Arial; font-size: 14px; }
+        .description { font-size: 12px; fill: #666; }
+        #tooltip { opacity: 0; transition: opacity 0.3s; }
+    </style>
+
+    <!-- 箭头定义 -->
+    <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#666"/>
+        </marker>
+    </defs>
+
+    <!-- 前端组件 -->
+    <g transform="translate(100,50)" class="component" id="frontend">
+        <rect width="200" height="100" rx="10"/>
+        <text x="100" y="40" text-anchor="middle" class="label">前端 (Next.js)</text>
+        <text x="100" y="70" text-anchor="middle" class="description">用户界面和交互层</text>
+    </g>
+
+    <!-- 后端组件 -->
+    <g transform="translate(300,200)" class="component" id="backend">
+        <rect width="200" height="120" rx="10"/>
+        <text x="100" y="40" text-anchor="middle" class="label">后端 (Golang/Gin)</text>
+        <text x="100" y="70" text-anchor="middle" class="description">业务逻辑处理</text>
+        <text x="100" y="90" text-anchor="middle" class="description">RESTful API</text>
+    </g>
+
+    <!-- 数据库组件 -->
+    <g transform="translate(500,400)" class="component" id="database">
+        <rect width="200" height="100" rx="10"/>
+        <text x="100" y="40" text-anchor="middle" class="label">PostgreSQL</text>
+        <text x="100" y="70" text-anchor="middle" class="description">数据持久化存储</text>
+    </g>
+
+    <!-- 连接箭头 -->
+    <g>
+        <!-- 前端到后端 -->
+        <path d="M200,150 L300,200" class="arrow"/>
+        <text x="250" y="160" class="description">HTTP/REST</text>
+
+        <!-- 后端到数据库 -->
+        <path d="M400,320 L500,400" class="arrow"/>
+        <text x="450" y="340" class="description">SQL查询</text>
+    </g>
+
+    <!-- 悬浮提示框 -->
+    <g id="tooltip" transform="translate(0,0)">
+        <rect width="200" height="80" rx="5" fill="white" stroke="#333"/>
+        <text id="tooltip-text" x="10" y="20" class="description"></text>
+    </g>
+
+    <script type="text/javascript">
+    <![CDATA[
+        // 组件描述
+        const descriptions = {
+            'frontend': `前端层 (Next.js):
+- 提供用户友好的界面
+- 处理用户交互
+- 实时数据展示`,
+            'backend': `后端层 (Golang/Gin):
+- 处理业务逻辑
+- 提供RESTful API
+- 集成AI能力`,
+            'database': `数据库层 (PostgreSQL):
+- 存储系统配置
+- 记录操作日志
+- 保存审计数据`
+        };
+
+        // 添加交互效果
+        Object.keys(descriptions).forEach(id => {
+            const element = document.getElementById(id);
+            const tooltip = document.getElementById('tooltip');
+            const tooltipText = document.getElementById('tooltip-text');
+
+            element.addEventListener('mouseover', (e) => {
+                tooltip.style.opacity = 1;
+                const lines = descriptions[id].split('\n');
+                tooltipText.innerHTML = '';
+                lines.forEach((line, i) => {
+                    const tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+                    tspan.textContent = line;
+                    tspan.setAttribute('x', '10');
+                    tspan.setAttribute('dy', i ? '1.2em' : '0');
+                    tooltipText.appendChild(tspan);
+                });
+                
+                const rect = e.target.getBoundingClientRect();
+                tooltip.setAttribute('transform', `translate(${rect.x + 20},${rect.y + 20})`);
+            });
+
+            element.addEventListener('mouseout', () => {
+                tooltip.style.opacity = 0;
+            });
+        });
+    ]]>
+    </script>
+</svg>

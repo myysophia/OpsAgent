@@ -52,31 +52,6 @@ type ToolHistory struct {
 
 const executeSystemPrompt_cn = `您是Kubernetes和云原生网络的技术专家，您的任务是遵循链式思维方法，确保彻底性和准确性，同时遵守约束。
 有一个服务名称对照表，用于帮助用户查询不同服务的关键字和资源名称。对照表如下：
-| 中文名称       | 英文关键字/别名                            | Kubernetes 资源名称                   |
-|------------|-------------------------------------|---------------------------------------|
-| 账户         | account                             | vnnox-middle-account-manage           |
-| 设备网关       | device-gateway/device gateway       | vnnox-middle-device-gateway           |
-| 设备管理平台     | device-management/device management | vnnox-middle-device-management        |
-| 内部网关       | 网关/gateway-service/device service   | vnnox-middle-gateway-service          |
-| 储能后端服务     | 储能后端/energy-cloud/energy cloud      | energy-cloud-service                  |
-| 工商储前端      | ems front                           | ems-front                             |
-| 家储后端服务     | 户储后端/energy management              | energy-management-service             |
-| 储能兼容服务     | 兼容服务/energy compatibility           | energy-compatibility                  |
-| 储能数字孪生       | digital twin                        | digital-twin-platform                 |
-| 储能低代码后端      | lowcode service/低代码 后端              | cloud-lowcode-service                 |
-| 音量微服务/音量服务/音量      | volume              | vnnox-volume                 |
-| 亮度微服务/亮度服务/亮度      | brightness/bright              |     vnnox-brightness             |
-| 储能低代码后端      | lowcode service/低代码 后端              | cloud-lowcode-service                 |
-| 储能低代码后端      | lowcode service/低代码 后端              | cloud-lowcode-service                 |
-| mysql数据库   | mysql/vnnox mysql                   | vnnox-mysql                           |
-| redis数据库   | redis/vnnox redis                   | vnnox-redis                           |
-| mongo数据库   | mongo/vnnox mongo                   | vnnox-mongo                           |
-| kong proxy | external gateway                    | kong-proxy                            |
-| iotdb dn   | iotdb-datanode/iotdb datanode       | iotdb-datanode                        |
-
-当用户询问服务相关问题时，请优先根据此表提供准确的资源名称或关键字映射,如果没有匹配到，请使用模糊匹配。
-使用此表时，请遵循以下原则：
-- 如果用户询问某个服务如何连接，优先使用查询 LoadBalancer/ExternalName 类型的svc。
 可用工具：
 - kubectl：用于执行 Kubernetes 命令。必须使用正确语法（例如 'kubectl get pods' 而非 'kubectl get pod'），避免使用 -o json/yaml 全量输出。
 - python：用于复杂逻辑或调用 Kubernetes Python SDK。输入：Python 脚本，输出：通过 print(...) 返回。
@@ -352,36 +327,6 @@ func Execute(c *gin.Context) {
 		zap.String("cluster", req.Cluster),
 		zap.String("apiKey", "***"),
 	)
-
-	// 获取适合的Kubernetes上下文
-	logger.Info("开始获取Kubernetes上下文", zap.String("args", req.Args))
-	err := getContextFromRAG(req.Args)
-	if err != nil {
-		logger.Error("RAG Flow 服务异常!", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":  fmt.Sprintf("RAG Flow 服务异常! %v", err),
-			"status": "error",
-			"message": fmt.Sprintf("无法获取你要查询的集群是哪一个？您可以这样问：\n\n"+
-				"中国节点%s\n"+
-				"储能中国节点%s\n"+
-				".......\n"+
-				"您是想查询哪个节点的信息呢？",
-				req.Args, req.Args),
-		})
-		return
-	}
-
-	// 检查上下文是否设置成功
-	logger.Info("获取Kubernetes上下文成功",
-		zap.String("current_context", currentKubeContext),
-	)
-
-	// 如果上下文为空，设置一个默认值
-	if currentKubeContext == "" {
-		currentKubeContext = "ask-cn" // 设置一个默认值
-		tools.SetCurrentKubeContext(currentKubeContext)
-		logger.Warn("上下文为空，设置默认值", zap.String("default_context", currentKubeContext))
-	}
 
 	// 确定使用的模型
 	executeModel := req.CurrentModel
