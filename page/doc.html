@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpsAgent 文档</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- 添加文档页特定样式 -->
+    <style>
+        /* 文档页面特定样式 */
+        .doc-content {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .doc-nav {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 250px;
+            height: 100vh;
+            background: #f8f9fa;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .doc-main {
+            margin-left: 250px;
+            padding: 20px 40px;
+        }
+        
+        .doc-nav ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .doc-nav li {
+            margin-bottom: 10px;
+        }
+        
+        .doc-nav a {
+            color: var(--dark-color);
+            text-decoration: none;
+        }
+        
+        .doc-nav a:hover {
+            color: var(--primary-color);
+        }
+        
+        .doc-section {
+            margin-bottom: 40px;
+        }
+        
+        .doc-section h2 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        
+        .doc-section h3 {
+            color: var(--dark-color);
+            margin-top: 30px;
+        }
+        
+        .doc-section ul, .doc-section ol {
+            padding-left: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .doc-section code {
+            background: #f4f4f4;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        
+        .doc-section pre {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+        
+        /* 警告提示框样式 */
+        .warning-box {
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            color: #856404;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .doc-nav {
+                display: none;
+            }
+            .doc-main {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="doc-nav">
+        <h3>文档目录</h3>
+        <ul>
+            <li><a href="#overview">1. 项目概述</a></li>
+            <li><a href="#tech-stack">2. 技术栈</a></li>
+            <li><a href="#core-modules">3. 核心功能模块</a></li>
+            <li><a href="#features">4. 技术特点</a></li>
+            <li><a href="#scenarios">5. 应用场景</a></li>
+            <li><a href="#highlights">6. 项目特色</a></li>
+            <li><a href="#deployment">7. 部署方式</a></li>
+            <li><a href="#best-practices">8. 最佳实践</a></li>
+            <li><a href="#future">9. 未来展望</a></li>
+            <li><a href="#cicd">10. CI/CD 流程</a></li>
+        </ul>
+    </nav>
+
+    <!-- 主要内容区 -->
+    <main class="doc-main">
+        <div class="doc-section" id="overview">
+            <h2>1. 项目概述</h2>
+            <p>OpsAgent 是一个基于 LLM (Large Language Model) 的 Kubernetes 集群管理工具，它通过 AI 能力来简化和增强 Kubernetes 的操作和管理。该项目旨在帮助用户更容易地进行集群诊断、安全审计、资源分析和清单生成等操作。</p>
+        </div>
+
+        <div class="doc-section" id="tech-stack">
+            <h2>2. 技术栈</h2>
+            <h3>2.1 核心技术</h3>
+            <ul>
+                <li><strong>编程语言</strong>: Go (主要), Python (部分功能支持)</li>
+                <li><strong>AI 模型</strong>: 兼容OpenAI API (支持Qwen、deepseek、GPT-4o...)</li>
+                <li><strong>容器技术</strong>: Docker</li>
+                <li><strong>云原生</strong>: Kubernetes</li>
+            </ul>
+
+            <h3>2.2 主要依赖</h3>
+            <ul>
+                <li><strong>CLI 框架</strong>: Cobra</li>
+                <li><strong>Kubernetes Client</strong>: client-go</li>
+                <li><strong>AI 集成</strong>: go-openai</li>
+                <li><strong>其他工具</strong>:
+                    <ul>
+                        <li>Trivy (容器安全扫描)</li>
+                        <li>kubectl (Kubernetes 命令行工具)</li>
+                        <li>Google Custom Search API (网络搜索集成)</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+
+        <div class="doc-section" id="core-modules">
+            <h2>3. 核心功能模块</h2>
+            <h3>3.1 分析模块 </h3>
+            <ul>
+                <li>分析 Kubernetes 资源的潜在问题</li>
+                <li>提供人类可读的分析报告和解决方案</li>
+                <li>支持多种资源类型分析</li>
+            </ul>
+
+            <h3>3.2 审计模块</h3>
+            <ul>
+                <li>执行 Pod 安全审计</li>
+                <li>检查配置错误</li>
+                <li>扫描容器镜像漏洞</li>
+                <li>生成安全报告</li>
+            </ul>
+
+            <!-- 其他模块内容... -->
+        </div>
+<!-- 在 doc.html 的 main.doc-main 部分添加以下内容 -->
+
+<!-- 补充诊断和生成模块 -->
+<div class="doc-section" id="core-modules">
+    <!-- ... 已有的分析模块和审计模块内容保持不变 ... -->
+    
+    <h3>3.3 诊断模块 (diagnose)</h3>
+    <ul>
+        <li>Pod 问题诊断</li>
+        <li>提供详细的诊断报告</li>
+        <li>推荐解决方案</li>
+    </ul>
+
+    <h3>3.4 生成模块</h3>
+    <ul>
+        <li>基于提示生成 Kubernetes 清单</li>
+        <li>支持清单验证</li>
+        <li>提供应用确认机制</li>
+    </ul>
+
+    <h3>3.5 执行模块 </h3>
+    <ul>
+        <li>基于自然语言指令执行操作</li>
+        <li>支持多种 Kubernetes 操作</li>
+        <li>提供操作确认机制</li>
+    </ul>
+</div>
+
+<!-- 添加技术特点部分 -->
+<div class="doc-section" id="features">
+    <h2>4. 技术特点</h2>
+    
+    <h3>4.1 AI 集成</h3>
+    <ul>
+        <li>支持多种 LLM 提供商:
+            <ul>
+                <li>OpenAI API</li>
+                <li>Qwen</li>
+                <li>deepseek</li>
+                <li>其他 OpenAI 兼容的 LLM</li>
+            </ul>
+        </li>
+        <li>AP key自管理</li>
+        <li>自适应提示工程</li>
+    </ul>
+
+    <h3>4.2 安全特性</h3>
+    <ul>
+        <li>支持 kubeconfig 配置</li>
+        <li>集群内外部署支持</li>
+        <li>操作确认机制</li>
+        <li>容器安全扫描</li>
+    </ul>
+
+    <h3>4.3 扩展性</h3>
+    <ul>
+        <li>模块化设计</li>
+        <li>工具插件系统</li>
+        <li>支持自定义插件/命令</li>
+    </ul>
+</div>
+
+<!-- 添加应用场景部分 -->
+<div class="doc-section" id="scenarios">
+    <h2>5. 应用场景</h2>
+    
+    <h3>5.1 DevOps 场景</h3>
+    <ul>
+        <li>快速问题诊断</li>
+        <li>自动化配置生成</li>
+        <li>安全合规检查</li>
+        <li>资源优化建议</li>
+    </ul>
+
+    <h3>5.2 安全运维</h3>
+    <ul>
+        <li>定期安全审计</li>
+        <li>漏洞扫描</li>
+        <li>配置审查</li>
+        <li>安全建议</li>
+    </ul>
+
+    <h3>5.3 开发测试</h3>
+    <ul>
+        <li>快速生成测试配置</li>
+        <li>环境问题诊断</li>
+        <li>配置验证</li>
+    </ul>
+</div>
+
+<!-- 添加项目特色部分 -->
+<div class="doc-section" id="highlights">
+    <h2>6. 项目特色</h2>
+    
+    <h3>6.1 智能化</h3>
+    <ul>
+        <li>自然语言交互</li>
+        <li>智能问题分析</li>
+        <li>自动化建议生成</li>
+    </ul>
+
+    <h3>6.2 易用性</h3>
+    <ul>
+        <li>清晰的命令行界面</li>
+        <li>人类可读的输出</li>
+        <li>详细的操作指导</li>
+    </ul>
+
+    <h3>6.3 可靠性</h3>
+    <ul>
+        <li>错误重试机制</li>
+        <li>验证确认机制</li>
+        <li>详细的日志记录</li>
+    </ul>
+</div>
+
+<!-- 添加部署方式部分 -->
+<div class="doc-section" id="deployment">
+    <h2>7. 部署方式</h2>
+    
+    <h3>7.1 本地部署</h3>
+    <ul>
+        <li>Go 工具链安装</li>
+        <li>依赖工具配置</li>
+        <li>环境变量设置</li>
+    </ul>
+
+    <h3>7.2 容器部署</h3>
+    <ul>
+        <li>Docker 镜像构建</li>
+        <li>Kubernetes 部署</li>
+        <li>配置映射</li>
+    </ul>
+</div>
+
+<!-- 添加未来展望部分 -->
+<div class="doc-section" id="future">
+    <h2>9. 未来展望</h2>
+    
+    <h3>9.1 潜在改进</h3>
+    <ul>
+        <li>支持更多 AI 模型</li>
+        <li>增强安全特性</li>
+        <li>改进用户体验</li>
+        <li>扩展工具集成</li>
+    </ul>
+
+    <h3>9.2 发展方向</h3>
+    <ul>
+        <li>云原生集成</li>
+        <li>多集群支持</li>
+        <li>智能运维</li>
+        <li>自动化运维</li>
+    </ul>
+</div>
+
+<!-- 添加 CI/CD 流程部分 -->
+<div class="doc-section" id="cicd">
+    <h2>10. CI/CD 流程</h2>
+    
+    <h3>10.1 自动化工作流</h3>
+    
+    <h4>测试工作流 (Test)</h4>
+    <ul>
+        <li><strong>触发条件</strong>: PR 提交或 master 分支推送</li>
+        <li><strong>功能</strong>:
+            <ul>
+                <li>使用最新版本 Go 环境</li>
+                <li>运行所有测试用例</li>
+                <li>确保代码质量</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h4>构建工作流 (Build)</h4>
+    <ul>
+        <li><strong>触发条件</strong>: master/main 分支推送或手动触发</li>
+        <li><strong>功能</strong>:
+            <ul>
+                <li>构建 Docker 镜像</li>
+                <li>推送到 GitHub Container Registry (GHCR)</li>
+                <li>自动标记版本号</li>
+                <li>维护 latest 和 py 标签</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h3>10.2 依赖管理</h3>
+    <p>使用 Dependabot 进行依赖版本更新：</p>
+    <ul>
+        <li>每日检查 Go 模块依赖更新</li>
+        <li>每日检查 GitHub Actions 依赖更新</li>
+        <li>自动创建 PR 进行依赖升级</li>
+        <li>限制最大同时开启的 PR 数量为 5</li>
+    </ul>
+
+    <h3>10.3 镜像仓库</h3>
+    <p>项目使用 GitHub Container Registry (ghcr.io) 存储 Docker 镜像：</p>
+    <ul>
+        <li>版本化标签: <code>ghcr.io/[owner]/OpsAgent:[version]</code></li>
+        <li>最新版本: <code>ghcr.io/[owner]/OpsAgent:latest</code></li>
+        <li>Python 版本: <code>ghcr.io/[owner]/OpsAgent:py</code></li>
+    </ul>
+</div>
+
+<!-- 添加 ToDo list 部分 -->
+<div class="doc-section" id="todo">
+    <h2>ToDo list</h2>
+    <ul>
+        <li>在调用gpt api前应该有一个dry-run的参数来确定prompt是否合适。避免token消耗过多</li>
+        <li>prompt 可以从外部输入不一定要预制定。例如日志和监控作为prompt 来分析异常</li>
+        <li>前端可以选择加载不同模型，类似于cherry studio</li>
+    </ul>
+</div>
+        <div class="doc-section" id="best-practices">
+            <h2>8. 最佳实践</h2>
+            <h3>8.3 安全注意事项</h3>
+            <div class="warning-box">
+                <h4>⚠️ 重要安全提醒</h4>
+                <p>当前版本在传递给 LLM 的信息中可能包含敏感信息。请注意以下安全实践：</p>
+                <ul>
+                    <li>使用最小权限的 kubeconfig</li>
+                    <li>生产环境建议使用只读权限</li>
+                    <li>配置专门的服务账号</li>
+                    <li>限制命名空间访问范围</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 使用示例部分 -->
+        <div class="doc-section" id="usage">
+            <h2>使用示例</h2>
+            <h3>基本命令</h3>
+            <pre><code>./ops-agent --model chatgpt-4o --verbose execute '查询集群ems-eu namespace的pod的内存和cpu limit值，以csv格式输出。表头包含pod名称、cpu、内存'</code></pre>
+            
+            <h3>支持的模型</h3>
+            <ul>
+                <li>qwen系列</li>
+                <li>chatgpt-4o-latest</li>
+                <li>deepseek-r1</li>
+                <li>qwen-plus</li>
+            </ul>
+
+            <h3>调试模式</h3>
+            <pre><code>--model gpt-4o --verbose execute 'how many namespace in the cluster?'</code></pre>
+        </div>
+
+        <!-- 返回首页按钮 -->
+        <div style="text-align: center; margin-top: 50px;">
+            <a href="index.html" class="btn btn-primary">
+                <i class="fas fa-arrow-left"></i> 返回首页
+            </a>
+        </div>
+    </main>
+</body>
+</html>

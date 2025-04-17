@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpsAgent AIops</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- 可以在这里引入图标库，例如 Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- 1. Hero Section -->
+    <header class="hero-section">
+        <div class="container">
+            <h1>OpsAgent:为运维注入 AI 智能</h1>
+            <p class="subtitle">多模型对话、智能诊断、可视化执行，一站式运维助手</p>
+            <div class="cta-buttons">
+                <a href="https://dify.agentgo.tech/chat/mFMOCgGBo6yvSjYA" class="btn btn-primary">立即体验</a>
+                <a href="#contact" class="btn btn-outline">联系我们</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- 2. 产品功能展示 -->
+        <section id="features" class="features-section">
+            <div class="container">
+                <h2>核心功能</h2>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-search"></i></div>
+                        <h3>智能分析命令</h3>
+                        <p>一键理解复杂 Kubernetes 操作的意图与影响。</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-brain"></i></div>
+                        <h3>多模型对话支持</h3>
+                        <p>支持 OpenAI、阿里通义等多种大语言模型。</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-chart-bar"></i></div>
+                        <h3>命令可视化结果</h3>
+                        <p>图表化展示资源状态与执行结果，更直观。</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-server"></i></div>
+                        <h3>多集群支持</h3>
+                        <p>统一控制和管理多个 Kubernetes 集群。</p>
+                    </div>
+                     <div class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-lock"></i></div>
+                        <h3>用户权限与审计</h3>
+                        <p>保障操作安全可追溯 (功能规划中)。</p>
+                    </div>
+                     <div class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-terminal"></i></div>
+                        <h3>上下文感知</h3>
+                        <p>能够理解对话上下文，提供连贯的运维支持。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. 交互演示 / 截图区 -->
+        <section id="demo" class="demo-section">
+            <div class="container">
+                <h2>交互演示</h2>
+                <p>直观展示 OpsAgent 如何解决常见的 K8s 运维问题。</p>
+                <div class="demo-content">
+                    <div class="demo-text">
+                        <h3>场景:Pod pending原因排查</h3>
+                        <p>用户输入："我的 Pod 'test... ' 为什么一直 Pending？"</p>
+                        <p>OpsAgent 分析后可能回复：</p>
+                        <ol>
+                            <li>检查 Pod 事件：<code>kubectl describe pod test...</code></li>
+                            <li>查看节点资源是否充足：<code>kubectl describe node [node-name]</code></li>
+                            <li>检查相关的 PVC 状态 (如果有关联)：<code>kubectl get pvc [pvc-name]</code></li>
+                        </ol>
+                        <p>AI 会进一步解释可能的原因，如资源不足、调度失败、镜像拉取错误等。</p>
+                    </div>
+                    <div class="demo-visual">
+                        <video width="100%" controls autoplay loop muted>
+                            <source src="https://pub-10375556b89a45e0a56aff68854a2214.r2.dev/opsagent.mp4" type="video/mp4">
+                            您的浏览器不支持视频播放。
+                        </video>
+                        <p style="text-align: center; font-size: 0.9em; color: #666;">OpsAgent 交互演示</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. 技术亮点 / 架构图 -->
+        <!-- 4. 技术亮点 / 架构图 -->
+        <section id="tech" class="tech-section">
+            <div class="container">
+                <h2>技术架构</h2>
+                 <div class="tech-content">
+                     <div class="tech-diagram">
+                        <!-- 放置架构图 -->
+                        <img src="https://pub-10375556b89a45e0a56aff68854a2214.r2.dev/ops-agent.drawio.svg" alt="OpsAgent 架构图">
+                        <p style="text-align: center; font-size: 0.9em; color: #666;">
+                            OpsAgent 系统架构图
+                        </p>
+                        <div class="diagram-description">
+                            <h4>简化架构图说明：</h4>
+                            <p>OpsAgent 采用分层架构，清晰解耦：</p>
+                            <ul>
+                                <li><b>API 层:</b> 接收用户请求，进行认证和初步处理。</li>
+                                <li><b>Assistant 层:</b> 核心智能引擎，负责对话管理、上下文理解和任务分解。</li>
+                                <li><b>Opsagent 层:</b> 对接多种大语言模型，进行推理、决策和生成。</li>
+                                <li><b>工具层:</b> 执行具体操作，如调用 Kubectl、运行 Python 脚本、执行 Trivy 扫描或进行智能资源查询。</li>
+                                <li><b>外部交互:</b> 主要与 Kubernetes API Server 交互来管理集群资源。</li>
+                            </ul>
+                            <p><b>核心流程:</b> 用户请求 -> API层 -> Assistant层 -> (调用 LLM层 进行决策，调用 工具层 执行任务) -> 与 Kubernetes 集群交互 -> 结果经 Assistant层 整合后 -> API层 返回给用户。</p>
+                        </div>
+                    </div>
+                    <div class="tech-stack">
+                        <h3>主要技术栈</h3>
+                        <p><strong>前端:</strong> React + Tailwind CSS (此原型未使用)</p>
+                        <p><strong>后端:</strong> Go (Gin) + Kubernetes Go Client (client-go)</p>
+                        <p><strong>AI 集成:</strong> 可插拔设计，支持 OpenAI, 谷歌 Gemini, 阿里通义千问等 LLM</p>
+                        <p><strong>核心库:</strong> Cobra (CLI), Viper (配置)</p>
+                        <p><strong>部署:</strong> Docker & Kubernetes</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+                <!-- ... (前面的 Tech Section 保持不变) ... -->
+
+        <!-- ========================== -->
+        <!-- 新增: 发展历程 & 更新日志  -->
+        <!-- ========================== -->
+        <!-- <section id="history" class="history-section">
+            <div class="container">
+                <h2>发展历程 & 更新日志 (History & Changelog)</h2>
+                <div class="history-timeline">
+                    <h4>项目演进</h4>
+                    <p>OpsAgent (原 k8s-agent) 的诞生源于简化 Kubernetes 运维的初衷。</p>
+                    <ul>
+                        <li><strong>早期探索 (命令行):</strong> 最初作为一个简单的命令行工具 (k8s-agent)，使用 OpenAI Assistant API 提供基本的问答能力。用户无法选择集群或模型。</li>
+                        <li><strong>引入 Function Calling:</strong> 随着 OpenAI 对 Function Calling 的支持，项目架构升级，允许 LLM 调用 `kubectl` 或 Python 脚本等外部工具，实现更复杂的操作。</li>
+                        <li><strong>多模型适配:</strong> 考虑到 GPT-4 的成本，我们积极适配了更多模型，如阿里的通义千问 (Qwen)，并增加了模型的可配置性。 (<em>参考: <code>fe0b78c</code> - Qwen 流式处理支持</em>)</li>
+                        <li><strong>前端界面开发:</strong> 为了提升用户体验，开发了前端界面，支持动态配置模型、管理集群连接（规划中）。</li>
+                        <li><strong>RAG 增强:</strong> 为解决 LLM 对特定业务知识理解不足和幻觉问题，集成了 RAG (Retrieval-Augmented Generation) 能力 (借助 RagFlow)，大幅提升了特定场景下的准确性。 (<em>参考: <code>83eb6cf</code>, <code>3b0a9a4</code> - RAG 相关功能</em>)</li>
+                        <li><strong>复杂任务处理 (ReAct):</strong> 针对多步骤的复杂运维任务，引入了 ReAct (Reasoning and Acting) 框架，提升了任务分解和执行的完整性。</li>
+                        <li><strong>可观测性与优化 (Dify):</strong> 近期接入了 Dify 平台，利用其 Chatflow 调用 Agent 接口，并通过其可观测性和标注功能，分析和优化了系统的性能瓶颈。</li>
+                    </ul>
+
+                    <h4>主要更新记录 (Selected Changelog)</h4>
+                    <p>以下是部分关键的 Git 提交记录，展示了项目迭代中的重要功能和修复：</p>
+                    <ul class="changelog-list">
+                        <li><code><span class="commit-hash">be99157</span> (v0.1.0) refactor:</code> 优化 prompt 避免返回内容无法解析</li>
+                        <li><code><span class="commit-hash">eb02f5b</span> fix:</code> 避免中间回复作为中间结果 (重大 fix)</li>
+                        <li><code><span class="commit-hash">ba77fc6</span> feat:</code> 更新 Execute 函数以增强工具历史记录和审计数据管理</li>
+                         <li><code><span class="commit-hash">83eb6cf</span> (v0.0.9) feat:</code> 更新 README, 添加 RAG 说明, 优化 LLM 输出解析逻辑</li>
+                        <li><code><span class="commit-hash">fdf6a42</span> feat:</code> 增强 Execute 函数对特定问题的处理逻辑</li>
+                        <li><code><span class="commit-hash">8e4af38</span> feat:</code> 增强审计日志系统及数据库检查功能</li>
+                        <li><code><span class="commit-hash">525116f</span> feat:</code> 新增审计日志系统及相关配置</li>
+                        <li><code><span class="commit-hash">fe0b78c</span> feat:</code> 为 Qwen 模型添加流式处理支持</li>
+                        <li><code><span class="commit-hash">a104c56</span> feat:</code> 新增上下文切换 API 及其实现</li>
+                        <li><code><span class="commit-hash">3b0a9a4</span> feat:</code> 新增 RAG 增强的 Kubernetes 上下文切换 API 及相关实现</li>
+                        <li><code><span class="commit-hash">d2d3c2c</span> feat:</code> 新增 OpsAgent 系统详细设计文档和多轮对话解决方案设计</li>
+                        <li><code><span class="commit-hash">222f2e2</span> (v2.0.5) fix:</code> k8s 部署问题</li>
+                        <li><code><span class="commit-hash">619bd51</span> feat:</code> 新增 k8s 部署</li>
+                        <li><code><span class="commit-hash">7cfacdd</span> (v2.0.0) init:</code> 实现基于 LLM 的 Kubernetes 集群管理工具 (项目初始化)</li>
+                         <li><code><span class="commit-hash">af963db</span> fix:</code> 修改 prompt</li>
+                         <li><code><span class="commit-hash">b9e2f3a</span> fix:</code> 修复 observation 为空时 return 无效信息</li>
+                    </ul>
+                    <p><em>*注：以上仅为部分代表性更新，完整记录请<a href="https://github.com/myysophia/OpsAgent/tree/feature/multiagent/commits/main" target="_blank">查看 GitHub Commit 历史</a>。</em></p>
+                </div>
+            </div>
+        </section> -->
+
+                <!-- ================================================== -->
+        <!-- 新增/替换: 发展历程 & 更新日志 (Timeline Style)  -->
+        <!-- ================================================== -->
+        <section id="history" class="history-section">
+            <div class="container">
+                <h2>发展历程 & 更新日志 (Timeline)</h2>
+                <div class="timeline-container">
+                    <div class="timeline">
+                        <!-- Timeline Item 1: Project Init -->
+                        <div class="timeline-item">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <span class="timeline-date">~ Late 2023 / Early 2024 (v2.0.0)</span>
+                                <h4>项目启动 & 核心 LLM 集成</h4>
+                                <p>OpsAgent (原 k8s-agent) 项目初始化，目标是构建基于 LLM 的 K8s 集群管理与运维助手。早期版本使用 OpenAI Assistant API 实现基本问答。</p>
+                                <span class="commit-ref">Ref: <code>7cfacdd</code> (init)</span>
+                            </div>
+                        </div>
+
+                        <!-- Timeline Item 2: Function Calling & Multi-LLM -->
+                         <div class="timeline-item">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <span class="timeline-date">Q1 2024</span>
+                                <h4>引入 Function Calling & 多模型支持</h4>
+                                <p>架构升级，支持 Function Calling，允许 LLM 调用 kubectl 等工具。为降低成本和提高灵活性，适配了阿里的通义千问 (Qwen) 模型。</p>
+                                <span class="commit-ref">Ref: <code>fe0b78c</code> (Qwen support)</span>
+                            </div>
+                        </div>
+
+                         <!-- Timeline Item 3: Enhancements & Audit -->
+                         <div class="timeline-item">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <span class="timeline-date">Q1/Q2 2024 (Pre-v0.1.0)</span>
+                                <h4>功能增强 & 审计日志</h4>
+                                <p>持续迭代，增强 Kubernetes 上下文处理、工具调用能力，并增加了初步的审计日志系统及数据库检查功能。</p>
+                                <span class="commit-ref">Ref: <code>fdf6a42</code> (Execute logic), <code>8e4af38</code>, <code>525116f</code> (Audit)</span>
+                            </div>
+                        </div>
+
+                        <!-- Timeline Item 4: RAG Integration -->
+                        <div class="timeline-item">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <span class="timeline-date">Q2 2024 (v0.0.9)</span>
+                                <h4>引入 RAG 提升准确性</h4>
+                                <p>集成 RAG (Retrieval-Augmented Generation) 能力，结合业务知识库，显著减少 LLM 幻觉，提高特定场景下的回复准确度。更新了相关 API 和文档。</p>
+                                <span class="commit-ref">Ref: <code>83eb6cf</code>, <code>3b0a9a4</code> (RAG), <code>a104c56</code> (Context API)</span>
+                            </div>
+                        </div>
+
+                         <!-- Timeline Item 5: Refactoring & Stability -->
+                        <div class="timeline-item">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <span class="timeline-date">Mid 2024 (v0.1.0)</span>
+                                <h4>代码重构 & 稳定性提升</h4>
+                                <p>进行了一轮代码重构，优化 Prompt 设计，修复了中间结果处理等关键 Bug，发布 v0.1.0 版本，提升系统稳定性。</p>
+                                <span class="commit-ref">Ref: <code>be99157</code> (prompt), <code>eb02f5b</code> (fix), <code>ba77fc6</code> (Execute history)</span>
+                            </div>
+                        </div>
+
+                         <!-- Timeline Item 6: Advanced Design & Dify -->
+                        <div class="timeline-item">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <span class="timeline-date">Mid/Late 2024</span>
+                                <h4>高级 Agent 设计 & Dify 集成</h4>
+                                <p>设计了更高级的 OpsAgent 架构和多轮对话方案。接入 Dify 平台进行 Chatflow 调用和可观测性分析，优化性能。</p>
+                                 <span class="commit-ref">Ref: <code>d2d3c2c</code> (OpsAgent design)</span>
+                            </div>
+                        </div>
+
+                         <!-- Timeline Item 7: Deployment & Fixes -->
+                        <div class="timeline-item">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <span class="timeline-date">Late 2024 (v2.0.5)</span>
+                                <h4>部署优化 & 持续修复</h4>
+                                <p>增加了 K8s 部署配置，并修复了相关的部署问题和运行时 Bug，如 observation 处理等。</p>
+                                <span class="commit-ref">Ref: <code>619bd51</code> (k8s deploy), <code>222f2e2</code> (deploy fix), <code>b9e2f3a</code> (obs fix)</span>
+                            </div>
+                        </div>
+
+                         <!-- Timeline Item 8: Present -->
+                        <div class="timeline-item">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <span class="timeline-date">至今 (Today)</span>
+                                <h4>持续迭代中</h4>
+                                <p>项目持续活跃开发中，关注 Roadmap 中的新功能和优化点！</p>
+                            </div>
+                        </div>
+
+                    </div> <!-- end .timeline -->
+                </div> <!-- end .timeline-container -->
+            </div>
+        </section>
+        <!-- ================================================== -->
+
+        <!-- ================== -->
+        <!-- 新增: 未来规划     -->
+        <!-- ================== -->
+        <section id="roadmap" class="roadmap-section">
+            <div class="container">
+                <h2>未来规划 (Roadmap)</h2>
+                 <p>我们致力于持续改进 OpsAgent，以下是近期规划的重点方向：</p>
+                <div class="roadmap-list">
+                    <div class="roadmap-item">
+                        <div class="roadmap-icon"><i class="fas fa-network-wired"></i></div>
+                        <h4>跨集群分析</h4>
+                        <p>增强对跨多个 Kubernetes 集群关联问题的诊断和分析能力。</p>
+                    </div>
+                     <div class="roadmap-item">
+                        <div class="roadmap-icon"><i class="fas fa-plus-circle"></i></div>
+                        <h4>动态集群管理</h4>
+                        <p>支持在运行时动态添加、移除和管理 K8s 集群连接。</p>
+                    </div>
+                    <div class="roadmap-item">
+                        <div class="roadmap-icon"><i class="fas fa-memory"></i></div>
+                        <h4>记忆能力优化</h4>
+                        <p>改进长期对话记忆机制，减少上下文理解中的幻觉问题。</p>
+                    </div>
+                    <div class="roadmap-item">
+                        <div class="roadmap-icon"><i class="fas fa-file-alt"></i> / <i class="fas fa-chart-line"></i></div>
+                        <h4>日志与监控集成</h4>
+                        <p>接入常见的日志（如 Loki, EFK）和监控（如 Prometheus）系统，提供更丰富的查询分析手段。</p>
+                    </div>
+                    <div class="roadmap-item">
+                        <div class="roadmap-icon"><i class="fas fa-cogs"></i></div>
+                        <h4>模型兼容性 & 性能</h4>
+                        <p>持续扩展支持的 LLM 模型，并不断优化系统响应速度和资源消耗。</p>
+                    </div>
+                     <div class="roadmap-item">
+                        <div class="roadmap-icon"><i class="fas fa-plug"></i></div>
+                        <h4>MCP插件与扩展</h4>
+                        <p>探索插件化架构，允许社区贡献更多工具和能力。(远期)</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. 用户评价 / 开源社区徽章 -->
+
+        <!-- 6. 底部 CTA -->
+         <section id="bottom-cta" class="bottom-cta-section">
+             <div class="container">
+                 <h2>准备好提升运维效率了吗？</h2>  
+                 <div class="cta-buttons">
+                    <a href="https://dify.agentgo.tech/chat/mFMOCgGBo6yvSjYA" target="_blank" class="btn btn-primary btn-large">
+                        <i class="fas fa-rocket"></i> 立即前往
+                    </a>
+                    <a href="doc.html" target="_blank" class="btn btn-secondary btn-large">查看文档</a>
+                    <!-- 可以放二维码图片链接 -->
+                    <!-- <a href="#community-group" class="btn btn-outline btn-large">加入交流群</a> -->
+                </div>
+             </div>
+         </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer id="contact" class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-info">
+                    <p>© 2025 OpsAgent Team. All Rights Reserved.</p>
+                </div>
+                <div class="footer-links">
+                    <a href="https://dify.agentgo.tech/chat/mFMOCgGBo6yvSjYA">问题反馈</a> |
+                    <a href="/">License</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>
