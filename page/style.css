@@ -1,0 +1,650 @@
+/* 基本重置和全局样式 */
+:root {
+    --primary-color: #3a86ff; /* 蓝色系主色 */
+    --secondary-color: #ffbe0b; /* 黄色系辅助色 (可选) */
+    --dark-color: #333;
+    --light-color: #f4f4f4;
+    --white-color: #fff;
+    --grey-color: #666;
+    --section-padding: 60px 0;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    color: var(--dark-color);
+    background-color: var(--white-color);
+}
+
+h1, h2, h3 {
+    margin-bottom: 1rem;
+    line-height: 1.3;
+}
+
+h1 { font-size: 2.8rem; font-weight: 700;}
+h2 { font-size: 2rem; font-weight: 600; text-align: center; margin-bottom: 2.5rem; }
+h3 { font-size: 1.4rem; font-weight: 600;}
+
+p {
+    margin-bottom: 1rem;
+}
+
+a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+.container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* 按钮样式 */
+.btn {
+    display: inline-block;
+    padding: 10px 25px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+    margin: 5px;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    text-decoration: none;
+    text-align: center;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: var(--white-color);
+}
+.btn-primary:hover {
+    background-color: #2a6dcc;
+    color: var(--white-color);
+    text-decoration: none;
+}
+
+.btn-secondary {
+    background-color: var(--light-color);
+    color: var(--dark-color);
+}
+.btn-secondary:hover {
+    background-color: #e0e0e0;
+     color: var(--dark-color);
+    text-decoration: none;
+}
+
+.btn-outline {
+    background-color: transparent;
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+}
+.btn-outline:hover {
+    background-color: var(--primary-color);
+    color: var(--white-color);
+     text-decoration: none;
+}
+
+.btn-large {
+    padding: 15px 35px;
+    font-size: 1.1rem;
+}
+
+.cta-buttons {
+    margin-top: 1.5rem;
+}
+
+/* 1. Hero Section */
+.hero-section {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #5a9eff 100%); /* 渐变背景 */
+    color: var(--white-color);
+    padding: 100px 0;
+    text-align: center;
+}
+
+.hero-section h1 {
+    font-size: 3.5rem; /* 调整标题大小 */
+    margin-bottom: 1rem;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+}
+
+.hero-section .subtitle {
+    font-size: 1.3rem;
+    margin-bottom: 2rem;
+    opacity: 0.9;
+}
+
+.hero-section .btn-outline { /* Hero 区的描边按钮适配浅色背景 */
+    color: var(--white-color);
+    border-color: var(--white-color);
+}
+.hero-section .btn-outline:hover {
+    background-color: var(--white-color);
+    color: var(--primary-color);
+}
+
+
+/* 2. Features Section */
+.features-section {
+    padding: var(--section-padding);
+    background-color: var(--light-color);
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* 响应式网格 */
+    gap: 2rem;
+}
+
+.feature-card {
+    background: var(--white-color);
+    padding: 2rem 1.5rem;
+    text-align: center;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+}
+
+.feature-icon {
+    font-size: 2.5rem;
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+.feature-card h3 {
+     margin-bottom: 0.5rem;
+}
+
+.feature-card p {
+    font-size: 0.95rem;
+    color: var(--grey-color);
+     margin-bottom: 0; /* 移除卡片内最后p的下边距 */
+}
+
+/* 3. Demo Section */
+.demo-section {
+    padding: var(--section-padding);
+}
+
+.demo-content {
+    display: flex;
+    flex-wrap: wrap; /* 在小屏幕上换行 */
+    align-items: center;
+    gap: 3rem;
+}
+
+.demo-text {
+    flex: 1; /* 占据一半空间 */
+    min-width: 300px; /* 保证最小宽度 */
+}
+.demo-text ol {
+     margin-left: 1.5rem;
+     margin-bottom: 1rem;
+}
+.demo-text code {
+    background-color: #eee;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-family: monospace;
+}
+
+
+.demo-visual {
+    flex: 1; /* 占据另一半空间 */
+    min-width: 300px;
+    text-align: center; /* 图片居中 */
+}
+.demo-visual img {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    margin: 0 auto; /* 确保图片在容器内居中 */
+}
+
+/* 4. Tech Section */
+.tech-section {
+    padding: var(--section-padding);
+    background-color: var(--light-color);
+}
+.tech-content {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start; /* 顶部对齐 */
+    gap: 3rem;
+}
+.tech-diagram {
+     flex: 1;
+     min-width: 300px;
+     text-align: center;
+}
+.tech-diagram img {
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #fff; /* 给图片加个白底 */
+     margin: 0 auto;
+}
+
+.tech-stack {
+    flex: 1;
+     min-width: 300px;
+}
+.tech-stack h3 {
+    margin-bottom: 1rem;
+}
+.tech-stack p {
+    margin-bottom: 0.5rem;
+}
+.tech-stack strong {
+    color: var(--primary-color);
+}
+
+/* 5. Community Section */
+.community-section {
+     padding: var(--section-padding);
+     text-align: center; /* 整体居中 */
+}
+
+.community-content {
+    max-width: 800px; /* 限制内容宽度使其更易读 */
+    margin: 0 auto;
+}
+
+.badges {
+    margin-bottom: 1.5rem;
+}
+.badges img {
+    margin: 0 5px; /* 给徽章之间加点间距 */
+    display: inline-block; /* 让图片并排 */
+}
+
+.testimonial {
+    margin-top: 2rem;
+    font-style: italic;
+    color: var(--grey-color);
+}
+.testimonial blockquote {
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+}
+.testimonial cite {
+    font-style: normal;
+    font-weight: bold;
+    color: var(--dark-color);
+}
+
+/* 6. Bottom CTA Section */
+.bottom-cta-section {
+    padding: var(--section-padding);
+    background-color: var(--primary-color);
+    color: var(--white-color);
+    text-align: center;
+}
+.bottom-cta-section h2 {
+    color: var(--white-color);
+    margin-bottom: 1.5rem;
+}
+.bottom-cta-section .btn-secondary {
+    background-color: var(--white-color);
+    color: var(--primary-color);
+}
+.bottom-cta-section .btn-secondary:hover {
+    background-color: #f0f0f0;
+}
+.bottom-cta-section .btn-outline {
+    color: var(--white-color);
+    border-color: var(--white-color);
+}
+.bottom-cta-section .btn-outline:hover {
+     background-color: var(--white-color);
+    color: var(--primary-color);
+}
+.bottom-cta-section .cta-buttons .fab { /* Font Awesome 图标 */
+    margin-right: 8px;
+}
+
+
+/* Footer */
+.footer {
+    background-color: var(--dark-color);
+    color: #ccc;
+    padding: 40px 0;
+    font-size: 0.9rem;
+}
+
+.footer-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap; /* 在小屏幕换行 */
+    gap: 1rem;
+}
+
+.footer-info p {
+    margin-bottom: 0.3rem;
+}
+
+.footer-links a {
+    color: #ccc;
+    margin: 0 10px;
+}
+
+.footer-links a:hover {
+    color: var(--white-color);
+    text-decoration: none;
+}
+
+/* 简单的响应式调整 */
+@media (max-width: 768px) {
+    h1 { font-size: 2.5rem; }
+    .hero-section h1 { font-size: 2.8rem; }
+    h2 { font-size: 1.8rem; }
+
+    .hero-section { padding: 60px 0; }
+
+    .features-grid {
+        grid-template-columns: 1fr; /* 单列显示 */
+    }
+
+    .demo-content, .tech-content {
+        flex-direction: column; /* 垂直堆叠 */
+         gap: 2rem;
+    }
+
+    .footer-content {
+        flex-direction: column;
+        text-align: center;
+    }
+    .footer-links {
+        margin-top: 1rem;
+    }
+     .footer-links a {
+        margin: 0 5px; /* 缩小链接间距 */
+    }
+}
+/* ======================== */
+/* 新增: History Section    */
+/* ======================== */
+.history-section {
+    padding: var(--section-padding);
+    /* background-color: var(--light-color); /* 可以取消注释以添加背景色 */
+}
+
+.history-timeline h4 {
+    font-size: 1.2rem;
+    color: var(--primary-color);
+    margin-top: 1.5rem;
+    margin-bottom: 0.8rem;
+    border-left: 3px solid var(--primary-color);
+    padding-left: 10px;
+}
+
+.history-timeline ul {
+    list-style: disc;
+    margin-left: 20px;
+    margin-bottom: 1.5rem;
+}
+.history-timeline ul li {
+    margin-bottom: 0.5rem;
+}
+.history-timeline ul li strong {
+    color: var(--dark-color);
+}
+.history-timeline ul li em {
+    font-style: italic;
+    color: var(--grey-color);
+    font-size: 0.9em;
+}
+
+
+.changelog-list {
+    list-style: none; /* 去掉默认列表样式 */
+    padding-left: 0;
+    font-family: monospace; /* 使用等宽字体 */
+    font-size: 0.9rem;
+    background-color: #f8f8f8; /* 轻微背景色 */
+    border: 1px solid #eee;
+    border-radius: 5px;
+    padding: 1rem 1.5rem;
+    max-height: 400px; /* 限制最大高度，可滚动 */
+    overflow-y: auto; /* 超出部分显示滚动条 */
+}
+
+.changelog-list li {
+    margin-bottom: 0.6rem;
+    line-height: 1.4;
+    color: var(--grey-color); /* 默认灰色 */
+}
+.changelog-list li code { /* 用于包裹整个消息 */
+    display: block; /* 让每个条目占一行 */
+}
+
+.changelog-list .commit-hash {
+    color: var(--primary-color); /* 突出显示 commit hash */
+    font-weight: bold;
+    margin-right: 8px;
+}
+
+.changelog-list li::before { /* 可以用图标代替 */
+   /* content: '✓ '; */
+   /* color: green; */
+   /* margin-right: 5px; */
+}
+
+/* 根据 commit 类型可选添加不同颜色区分 (示例) */
+.changelog-list li code[class*="feat:"] { color: #2a9d8f; }
+.changelog-list li code[class*="fix:"] { color: #e76f51; }
+.changelog-list li code[class*="refactor:"] { color: #f4a261; }
+.changelog-list li code[class*="chore:"] { color: #a8dadc; }
+.changelog-list li code[class*="doc:"] { color: #457b9d; }
+.changelog-list li code[class*="init:"] { color: var(--secondary-color); font-weight: bold;} /* 突出 init */
+
+/* ======================== */
+/* 新增: Roadmap Section    */
+/* ======================== */
+.roadmap-section {
+    padding: var(--section-padding);
+     background-color: var(--light-color); /* 交替背景色 */
+}
+
+.roadmap-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.roadmap-item {
+    background: var(--white-color);
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    text-align: center;
+    /* transition: transform 0.3s ease; */ /* 可选悬浮效果 */
+}
+/*
+.roadmap-item:hover {
+    transform: translateY(-3px);
+}
+*/
+
+.roadmap-icon {
+    font-size: 2.2rem;
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+}
+.roadmap-icon .fa-file-alt { /* 处理双图标 */
+    margin-right: 5px;
+}
+
+.roadmap-item h4 {
+    font-size: 1.15rem;
+    margin-bottom: 0.5rem;
+}
+
+.roadmap-item p {
+    font-size: 0.95rem;
+    color: var(--grey-color);
+    margin-bottom: 0;
+}
+
+
+/* 微调：如果 history 和 roadmap 相邻，可以调整间距 */
+.history-section + .roadmap-section {
+    /* border-top: 1px solid #ddd; /* 可选的分隔线 */
+}
+
+/* ============================================= */
+/* 新增/替换: History Section (Timeline Style)   */
+/* ============================================= */
+.history-section {
+    padding: var(--section-padding);
+    background-color: var(--white-color); /* Or keep var(--light-color) */
+}
+
+.timeline-container {
+    position: relative;
+    max-width: 800px; /* Adjust width as needed */
+    margin: 30px auto 0 auto; /* Add top margin */
+}
+
+/* The actual timeline line */
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 10px; /* Position the line slightly from the left */
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: #e0e0e0; /* Light grey line */
+    border-radius: 2px;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 40px; /* Space between items */
+    padding-left: 40px; /* Space for the marker and line */
+}
+
+/* Last item doesn't need extra bottom margin */
+.timeline-item:last-child {
+    margin-bottom: 0;
+}
+
+/* The circle marker */
+.timeline-marker {
+    position: absolute;
+    left: 0px; /* Align marker with the line's left edge */
+    top: 5px; /* Adjust vertical alignment */
+    width: 20px;
+    height: 20px;
+    background-color: var(--white-color); /* White background */
+    border: 4px solid var(--primary-color); /* Primary color border */
+    border-radius: 50%;
+    z-index: 1; /* Ensure marker is above the line */
+}
+
+.timeline-content {
+    position: relative;
+    background-color: var(--light-color); /* Light background for content */
+    padding: 15px 20px;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Arrow pointing towards the marker (optional but nice) */
+.timeline-content::before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    left: -10px; /* Position arrow outside the content box */
+    width: 0;
+    height: 0;
+    border-top: 10px solid transparent;
+    border-bottom: 10px solid transparent;
+    border-right: 10px solid var(--light-color); /* Arrow color matches content bg */
+}
+
+
+.timeline-date {
+    display: block;
+    font-size: 0.85em;
+    color: var(--grey-color);
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.timeline-content h4 {
+    font-size: 1.2rem;
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: var(--primary-color);
+}
+
+.timeline-content p {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-bottom: 10px;
+    color: var(--dark-color);
+}
+.timeline-content p:last-child {
+    margin-bottom: 0;
+}
+
+.commit-ref {
+    display: inline-block; /* Or block if needed */
+    font-size: 0.85em;
+    color: var(--grey-color);
+    font-family: monospace;
+    margin-top: 8px;
+}
+.commit-ref code {
+    background-color: #e0e0e0;
+    padding: 2px 4px;
+    border-radius: 3px;
+    color: var(--dark-color);
+}
+
+/* Basic Responsive: Stack items on smaller screens */
+@media (max-width: 600px) {
+    .timeline::before {
+        left: 10px; /* Keep line on the left */
+    }
+    .timeline-item {
+        padding-left: 40px; /* Maintain padding */
+        margin-bottom: 30px;
+    }
+    .timeline-marker {
+        left: 0px; /* Keep marker aligned with line */
+    }
+    .timeline-content {
+        width: 100%; /* Content takes full width */
+    }
+    .timeline-content::before {
+        /* Adjust or remove arrow on small screens if it looks bad */
+        left: -8px;
+        border-right-width: 8px;
+        border-left-width: 0;
+        top: 12px;
+    }
+}
+/* ============================================= */
