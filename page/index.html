@@ -81,9 +81,12 @@
                         <p>AI 会进一步解释可能的原因，如资源不足、调度失败、镜像拉取错误等。</p>
                     </div>
                     <div class="demo-visual">
-                        <!-- 放置截图或 GIF 的区域 -->
-                        <img src="https://via.placeholder.com/600x400.png?text=OpsAgent+Screenshot+Here" alt="OpsAgent 交互截图">
-                        <p style="text-align: center; font-size: 0.9em; color: #666;">(这里替换为实际的截图或 GIF)</p>
+                        <!-- 替换为 video 标签 -->
+                        <video width="100%" controls autoplay loop muted>
+                            <source src="https://pub-10375556b89a45e0a56aff68854a2214.r2.dev/opsagent.mp4" type="video/mp4">
+                            您的浏览器不支持视频播放。
+                        </video>
+                        <p style="text-align: center; font-size: 0.9em; color: #666;">OpsAgent 交互演示</p>
                     </div>
                 </div>
             </div>
@@ -95,9 +98,9 @@
                 <h2>技术架构</h2>
                  <div class="tech-content">
                      <div class="tech-diagram">
-                        <!-- 放置架构图 -->
-                        <img src="https://via.placeholder.com/500x350.png?text=Architecture+Diagram" alt="OpsAgent 架构图">
-                         <p style="text-align: center; font-size: 0.9em; color: #666;">(这里替换为实际的架构图)</p>
+                        <!-- 更新架构图链接和 alt 文本 -->
+                        <img src="https://pub-10375556b89a45e0a56aff68854a2214.r2.dev/ops-agent.drawio.svg" alt="OpsAgent 系统架构图">
+                         <p style="text-align: center; font-size: 0.9em; color: #666;">OpsAgent 系统架构图</p>
                     </div>
                     <div class="tech-stack">
                         <h3>主要技术栈</h3>
@@ -109,9 +112,7 @@
                     </div>
                 </div>
             </div>
-        section>
-
-                <!-- ... (前面的 Tech Section 保持不变) ... -->
+        </section>
 
         <!-- ========================== -->
         <!-- 新增: 发展历程 & 更新日志  -->
@@ -304,30 +305,97 @@
             </div>
         </section>
 
-        <!-- 5. 用户评价 / 开源社区徽章 -->
-        <section id="community" class="community-section">
+        <!-- 在 roadmap section 后面添加新的定制开发服务板块 -->
+        <section id="custom-dev" class="custom-dev-section">
             <div class="container">
-                <h2>加入我们 & 社区认可</h2>
-                 <div class="community-content">
-                    <div class="badges">
-                        <!-- 使用 Shields.io 生成的真实徽章替换 -->
-                        <img src="https://img.shields.io/github/stars/OpsAgent?style=social" alt="GitHub Stars">
-                        <img src="https://img.shields.io/github/forks/OpsAgent?style=social" alt="GitHub Forks">
-                        <img src="https://img.shields.io/github/license/OpsAgent" alt="License">
-                         <img src="https://img.shields.io/github/issues/OpsAgent" alt="GitHub Issues">
+                <h2>定制开发服务</h2>
+                <p class="section-intro">针对企业特定需求提供专业的定制开发服务</p>
+                
+                <div class="custom-dev-grid">
+                    <div class="custom-dev-card">
+                        <div class="card-icon"><i class="fas fa-cubes"></i></div>
+                        <h3>多集群管理增强</h3>
+                        <ul>
+                            <li>跨集群资源统一管理</li>
+                            <li>集群监控指标聚合</li>
+                            <li>多集群调度策略定制</li>
+                            <li>统一认证和权限管理</li>
+                        </ul>
                     </div>
-                    <p>已有众多开发者关注和参与 OpsAgent 项目！</p>
-                    <p>我们欢迎各种形式的贡献，无论是代码、文档、想法还是问题反馈。</p>
-                    <!-- 可以在这里加入精选的用户评价 -->
-                    <!--
-                    <div class="testimonial">
-                        <blockquote>"OpsAgent 极大地简化了我们团队的 K8s 日常排错工作！"</blockquote>
-                        <cite>- 来自 GitHub User</cite>
+                    
+                    <div class="custom-dev-card">
+                        <div class="card-icon"><i class="fas fa-code-branch"></i></div>
+                        <h3>MCP 功能定制</h3>
+                        <ul>
+                            <li>自定义 MCP 插件开发</li>
+                            <li>多云管理平台集成</li>
+                            <li>资源编排功能定制</li>
+                            <li>自动化运维流程</li>
+                        </ul>
                     </div>
-                    -->
+                    
+                    <div class="custom-dev-card">
+                        <div class="card-icon"><i class="fas fa-tools"></i></div>
+                        <h3>工具链集成</h3>
+                        <ul>
+                            <li>CI/CD 工具链整合</li>
+                            <li>监控告警系统对接</li>
+                            <li>日志分析平台集成</li>
+                            <li>安全扫描工具接入</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="custom-dev-card">
+                        <div class="card-icon"><i class="fas fa-user-cog"></i></div>
+                        <h3>个性化功能</h3>
+                        <ul>
+                            <li>自定义数据大盘</li>
+                            <li>专属运维流程定制</li>
+                            <li>企业级权限管理</li>
+                            <li>私有化部署支持</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="custom-dev-features">
+                    <h3>定制服务优势</h3>
+                    <div class="features-flex">
+                        <div class="feature-item">
+                            <i class="fas fa-check-circle"></i>
+                            <span>专业技术团队支持</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-check-circle"></i>
+                            <span>源码级功能定制</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-check-circle"></i>
+                            <span>持续技术支持</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-check-circle"></i>
+                            <span>商业级SLA保障</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="contact-info">
+                    <h3>定制开发咨询</h3>
+                    <p>如果您有特定的需求或想了解更多信息，请通过以下方式联系我们：</p>
+                    <div class="contact-methods">
+                        <div class="contact-method">
+                            <i class="fas fa-envelope"></i>
+                            <a href="mailto:myysophia@gmail.com">myysophia@gmail.com</a>
+                        </div>
+                        <div class="contact-method">
+                            <i class="fab fa-weixin"></i>
+                            <span>微信咨询：扫描下方二维码</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
+
 
         <!-- 6. 底部 CTA -->
          <section id="bottom-cta" class="bottom-cta-section">
@@ -351,8 +419,7 @@
             <div class="footer-content">
                 <div class="footer-info">
                     <p>© 2025 OpsAgent Team. All Rights Reserved.</p>
-                    <p>作者/维护者: myysophia & 社区贡献者</p>
-                     <p>联系邮箱: <a href="mailto:myysophia@gmail.com">myysophia@gmail.com</a> (示例)</p>
+                     <p>联系邮箱: <a href="mailto:myysophia@gmail.com">myysophia@gmail.com</a></p>
                 </div>
                 <div class="footer-links">
                     <a href="https://github.com/myysophia/OpsAgent/tree/feature/multiagent" target="_blank">GitHub</a> |

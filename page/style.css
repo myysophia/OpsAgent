@@ -648,3 +648,114 @@ img {
     }
 }
 /* ============================================= */
+
+/* 定制开发服务板块样式 */
+.custom-dev-section {
+    padding: 4rem 0;
+    background-color: #f8f9fa;
+}
+
+.custom-dev-section .section-intro {
+    text-align: center;
+    color: #666;
+    margin-bottom: 3rem;
+}
+
+.custom-dev-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+    margin-bottom: 3rem;
+}
+
+.custom-dev-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
+}
+
+.custom-dev-card:hover {
+    transform: translateY(-5px);
+}
+
+.card-icon {
+    font-size: 2rem;
+    color: #3a86ff;
+    margin-bottom: 1rem;
+}
+
+.custom-dev-card h3 {
+    color: #333;
+    margin-bottom: 1rem;
+}
+
+.custom-dev-card ul {
+    list-style: none;
+    padding: 0;
+}
+
+.custom-dev-card ul li {
+    margin: 0.5rem 0;
+    color: #666;
+    padding-left: 1.5rem;
+    position: relative;
+}
+
+.custom-dev-card ul li:before {
+    content: "•";
+    color: #3a86ff;
+    position: absolute;
+    left: 0;
+}
+
+.custom-dev-features {
+    text-align: center;
+    margin: 3rem 0;
+}
+
+.features-flex {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 2rem;
+    margin-top: 1.5rem;
+}
+
+.feature-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.feature-item i {
+    color: #3a86ff;
+}
+
+.contact-info {
+    text-align: center;
+    padding: 2rem;
+    background: white;
+    border-radius: 8px;
+    margin-top: 3rem;
+}
+
+.contact-methods {
+    display: flex;
+    justify-content: center;
+    gap: 3rem;
+    margin: 2rem 0;
+}
+
+.contact-method {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pricing-note {
+    color: #666;
+    font-style: italic;
+    margin-top: 1rem;
+}
