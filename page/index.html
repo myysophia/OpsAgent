@@ -37,7 +37,7 @@
                     <div class="feature-card">
                         <div class="feature-icon"><i class="fas fa-brain"></i></div>
                         <h3>多模型对话支持</h3>
-                        <p>支持 OpenAI、阿里通义等多种大语言模型。</p>
+                        <p>插拔式设计支持 OpenAI、阿里通义等多种大语言模型。</p>
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon"><i class="fas fa-chart-bar"></i></div>
@@ -68,9 +68,11 @@
             <div class="container">
                 <h2>交互演示</h2>
                 <p>直观展示 OpsAgent 如何解决常见的 K8s 运维问题。</p>
+                
+                <!-- 场景1: Pod Pending 问题 -->
                 <div class="demo-content">
                     <div class="demo-text">
-                        <h3>场景:Pod pending原因排查</h3>
+                        <h3>场景1: Pod Pending原因排查</h3>
                         <p>用户输入："我的 Pod 'test... ' 为什么一直 Pending？"</p>
                         <p>OpsAgent 分析后可能回复：</p>
                         <ol>
@@ -88,10 +90,40 @@
                         <p style="text-align: center; font-size: 0.9em; color: #666;">OpsAgent 交互演示</p>
                     </div>
                 </div>
+
+                <!-- 场景2: AI 自助处理磁盘告警 -->
+                <div class="demo-content">
+                    <div class="demo-text">
+                        <h3>场景2: AI 自助处理磁盘告警</h3>
+                        <p>用户输入："收到节点 disk-pressure 告警，请帮我处理"</p>
+                        <p>OpsAgent 自动执行以下步骤：</p>
+                        <ol>
+                            <li>分析告警信息，识别问题节点</li>
+                            <li>执行磁盘使用情况分析</li>
+                            <li>智能清理临时文件和日志</li>
+                            <li>提供优化建议和预防措施</li>
+                        </ol>
+                        <p>AI 会持续监控处理进度，并在完成后提供详细报告。</p>
+                    </div>
+                    <div class="demo-visual">
+                        <div class="image-gallery">
+                            <img src="https://pub-10375556b89a45e0a56aff68854a2214.r2.dev/auto.png" 
+                                 alt="AI 自助处理流程图" 
+                                 class="gallery-image"
+                                 onclick="openImageModal(this.src)">
+                        </div>
+                        <p style="text-align: center; font-size: 0.9em; color: #666;">AI 自助处理流程图</p>
+                    </div>
+                </div>
             </div>
         </section>
 
-        <!-- 4. 技术亮点 / 架构图 -->
+        <!-- 图片放大模态框 -->
+        <div id="imageModal" class="modal">
+            <span class="close-modal">&times;</span>
+            <img class="modal-content" id="modalImage">
+        </div>
+
         <!-- 4. 技术亮点 / 架构图 -->
         <section id="tech" class="tech-section">
             <div class="container">
@@ -99,7 +131,10 @@
                  <div class="tech-content">
                      <div class="tech-diagram">
                         <!-- 放置架构图 -->
-                        <img src="https://pub-10375556b89a45e0a56aff68854a2214.r2.dev/ops-agent.drawio.svg" alt="OpsAgent 架构图">
+                        <img src="https://pub-10375556b89a45e0a56aff68854a2214.r2.dev/ops-agent.drawio.svg" 
+                             alt="OpsAgent 架构图"
+                             class="gallery-image"
+                             onclick="openImageModal(this.src)">
                         <p style="text-align: center; font-size: 0.9em; color: #666;">
                             OpsAgent 系统架构图
                         </p>
@@ -118,7 +153,7 @@
                     </div>
                     <div class="tech-stack">
                         <h3>主要技术栈</h3>
-                        <p><strong>前端:</strong> React + Tailwind CSS (此原型未使用)</p>
+                        <p><strong>前端:</strong> React + Tailwind CSS </p>
                         <p><strong>后端:</strong> Go (Gin) + Kubernetes Go Client (client-go)</p>
                         <p><strong>AI 集成:</strong> 可插拔设计，支持 OpenAI, 谷歌 Gemini, 阿里通义千问等 LLM</p>
                         <p><strong>核心库:</strong> Cobra (CLI), Viper (配置)</p>
@@ -351,5 +386,36 @@
         </div>
     </footer>
 
+    <script>
+        // 获取模态框元素
+        const modal = document.getElementById('imageModal');
+        const modalImg = document.getElementById('modalImage');
+        const closeBtn = document.getElementsByClassName('close-modal')[0];
+
+        // 打开模态框
+        function openImageModal(imgSrc) {
+            modal.style.display = "block";
+            modalImg.src = imgSrc;
+        }
+
+        // 关闭模态框
+        closeBtn.onclick = function() {
+            modal.style.display = "none";
+        }
+
+        // 点击模态框外部关闭
+        modal.onclick = function(event) {
+            if (event.target === modal) {
+                modal.style.display = "none";
+            }
+        }
+
+        // ESC 键关闭模态框
+        document.addEventListener('keydown', function(event) {
+            if (event.key === "Escape" && modal.style.display === "block") {
+                modal.style.display = "none";
+            }
+        });
+    </script>
 </body>
 </html>

@@ -174,3 +174,4 @@ configs/config.yaml
 
 .DS_Store
 config
+.deploy.yaml
