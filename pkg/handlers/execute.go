@@ -51,6 +51,25 @@ type ToolHistory struct {
 }
 
 const executeSystemPrompt_cn = `您是Kubernetes和云原生网络的技术专家，您的任务是遵循链式思维方法，确保彻底性和准确性，同时遵守约束。
+有一个集群上下文对照表，用于帮助用户查询不同集群的资源。对照表如下：
+| 集群上下文名称 (context) | namespace | 用户说明 |
+| --- | --- | --- |
+| eks-au | au | 澳洲/澳洲节点/au/AU/Au |
+| ask-cn | cn | 中国/中国节点/cn/Cn/CN |
+| ask-eu | eu | 欧洲/欧洲节点/法兰克福/EU |
+| ask-uat | uat | uat环境/测试环境/uat |
+| eks-in | in | 印度/印度节点/IN/In/in |
+| eks-us | us | 美国/美国节点/us/Us/US |
+| eks-ems-eu-new | ems-eu | 储能欧洲/EMS EU集群/ems eu/储能EU |
+| cce-ems-plus-2 | ems-plus-mapai | 储能中国节点/ems cn 集群 |
+| ems-uat-new-1 | ems-uat | 储能uat节点/储能测试环境/ems uat环境 |
+注意
+1. 当用户询问集群相关问题时，请优先根据此表提供准确的集群上下文名称和命名空间映射，添加到要执行的tool中,tool中必须要指定--context和--namespace参数。
+2. 当用户的问题中包含多个context时，调用tools时应该逐个context查询进行输出。
+	例如用户问题: 储能中国节点和ems uat环境的pod镜像版本、cpu/memory request、cpu/memory limit?
+    对应的tool: 'kubectl --kubeconfig=./config --context=cce-ems-plus-2 --namespace=ems-plus-mapai get pods -o custom-columns='NAME:.metadata.name,IMAGE:.spec.containers[*].image,CPU_REQ:.spec.containers[*].resources.requests.cpu,MEM_REQ:.spec.containers[*].resources.requests.memory,CPU_LIMIT:.spec.containers[*].resources.limits.cpu,MEM_LIMIT:.spec.containers[*].resources.limits.memory' --no-headers && kubectl --kubeconfig=./config --context=ems-uat-new-1 --namespace=ems-uat get pods -o custom-columns='NAME:.metadata.name,IMAGE:.spec.containers[*].image,CPU_REQ:.spec.containers[*].resources.requests.cpu,MEM_REQ:.spec.containers[*].resources.requests.memory,CPU_LIMIT:.spec.containers[*].resources.limits.cpu,MEM_LIMIT:.spec.containers[*].resources.limits.memory' --no-headers'
+
+
 有一个服务名称对照表，用于帮助用户查询不同服务的关键字和资源名称。对照表如下：
 | 中文名称       | 英文关键字/别名                            | Kubernetes 资源名称                   |
 |------------|-------------------------------------|---------------------------------------|
@@ -360,34 +379,34 @@ func Execute(c *gin.Context) {
 	)
 
 	// 获取适合的Kubernetes上下文
-	logger.Info("开始获取Kubernetes上下文", zap.String("args", req.Args))
-	err := getContextFromRAG(req.Args)
-	if err != nil {
-		logger.Error("RAG Flow 服务异常!", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":  fmt.Sprintf("RAG Flow 服务异常! %v", err),
-			"status": "error",
-			"message": fmt.Sprintf("无法获取你要查询的集群是哪一个？您可以这样问：\n\n"+
-				"中国节点%s\n"+
-				"储能中国节点%s\n"+
-				".......\n"+
-				"您是想查询哪个节点的信息呢？",
-				req.Args, req.Args),
-		})
-		return
-	}
-
-	// 检查上下文是否设置成功
-	logger.Info("获取Kubernetes上下文成功",
-		zap.String("current_context", currentKubeContext),
-	)
-
-	// 如果上下文为空，设置一个默认值
-	if currentKubeContext == "" {
-		currentKubeContext = "ask-cn" // 设置一个默认值
-		tools.SetCurrentKubeContext(currentKubeContext)
-		logger.Warn("上下文为空，设置默认值", zap.String("default_context", currentKubeContext))
-	}
+	// logger.Info("开始获取Kubernetes上下文", zap.String("args", req.Args))
+	//err := getContextFromRAG(req.Args)
+	//if err != nil {
+	//	logger.Error("RAG Flow 服务异常!", zap.Error(err))
+	//	c.JSON(http.StatusInternalServerError, gin.H{
+	//		"error":  fmt.Sprintf("RAG Flow 服务异常! %v", err),
+	//		"status": "error",
+	//		"message": fmt.Sprintf("无法获取你要查询的集群是哪一个？您可以这样问：\n\n"+
+	//			"中国节点%s\n"+
+	//			"储能中国节点%s\n"+
+	//			".......\n"+
+	//			"您是想查询哪个节点的信息呢？",
+	//			req.Args, req.Args),
+	//	})
+	//	return
+	//}
+	//
+	//// 检查上下文是否设置成功
+	//logger.Info("获取Kubernetes上下文成功",
+	//	zap.String("current_context", currentKubeContext),
+	//)
+	//
+	//// 如果上下文为空，设置一个默认值
+	//if currentKubeContext == "" {
+	//	currentKubeContext = "ask-cn" // 设置一个默认值
+	//	tools.SetCurrentKubeContext(currentKubeContext)
+	//	logger.Warn("上下文为空，设置默认值", zap.String("default_context", currentKubeContext))
+	//}
 
 	// 确定使用的模型
 	executeModel := req.CurrentModel

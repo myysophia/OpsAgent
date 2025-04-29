@@ -173,5 +173,5 @@ logs
 configs/config.yaml
 
 .DS_Store
-config
+config*
 .deploy.yaml
