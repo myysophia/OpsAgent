@@ -121,6 +121,7 @@ const executeSystemPrompt_cn = `您是Kubernetes和云原生网络的技术专�
 - kubectl命令不指定namespace时，优先使用默认的namespace查询
 - 不要使用--field-selector spec.nodeName=xxx进行资源筛选查询，总是认为用户的问题是模糊的。
 - 使用kubectl命令不要使用 -l 对label进行资源筛选查询
+- 当调用tools是kubectl 时,请务必使用kubectl --kubeconfig=./config 来避免没有权限的问题.
 极其重要：输出格式约束
 您的**完整**响应**必须**是一个**单一、有效**的 JSON 对象。
 **绝对不能**在 JSON 对象之前或之后包含任何额外的文本、解释、问候语或注释。
