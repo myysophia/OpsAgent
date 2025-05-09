@@ -60,6 +60,7 @@ func executeShellCommand(command string) (string, error) {
 //   - string: 命令执行的输出
 //   - error: 执行过程中的错误
 func Kubectl(command string) (string, error) {
+
 	// 获取性能统计工具
 	perfStats := utils.GetPerfStats()
 	// 开始kubectl命令执行计时
@@ -81,20 +82,27 @@ func Kubectl(command string) (string, error) {
 	if !strings.Contains(command, "--kubeconfig") {
 		command = strings.Replace(command, "kubectl", "kubectl --kubeconfig=./config", 1)
 	}
-
 	// 先执行切换context的命令
-	switchCmd := fmt.Sprintf("kubectl config use-context %s", currentKubeContext)
-	_, err := executeShellCommand(switchCmd)
-	if err != nil {
-		logger.Error("切换context失败",
+	if strings.Contains(command, "--context=") {
+		parts := strings.Split(command, "--context=")
+		if len(parts) > 1 {
+			currentKubeContext = strings.Split(parts[1], " ")[0]
+			// 移除可能的引号
+			currentKubeContext = strings.Trim(currentKubeContext, "\"")
+		}
+		switchCmd := fmt.Sprintf("kubectl --kubeconfig=./config config use-context %s", currentKubeContext)
+		_, err := executeShellCommand(switchCmd)
+		if err != nil {
+			logger.Error("切换context失败",
+				zap.String("context", currentKubeContext),
+				zap.Error(err),
+			)
+			return "", fmt.Errorf("切换context失败: %v", err)
+		}
+		logger.Debug("已切换到context",
 			zap.String("context", currentKubeContext),
-			zap.Error(err),
 		)
-		return "", fmt.Errorf("切换context失败: %v", err)
 	}
-	logger.Debug("已切换到context",
-		zap.String("context", currentKubeContext),
-	)
 
 	// 如果命令中没有指定 --context 参数，则添加上下文参数
 	if !strings.Contains(command, "--context") {

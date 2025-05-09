@@ -102,8 +102,7 @@ const executeSystemPrompt_cn = `您是Kubernetes和云原生网络的技术专�
 - trivy：用于扫描镜像漏洞。输入：镜像名称，输出：漏洞报告。
 - jq：用于处理 JSON 数据。输入：有效的 jq 表达式，始终使用 'test()' 进行名称匹配。
 - iotdbtools: 当用户要求把文件直接传到oss时，调用这个工具将pod中的文件直接上传到oss,iotdbtools位于当前目录
-	这是一个iotdbtools的例子: "./iotdbtools backup --config ./config --pods vnnox-middle-oauth-f88d9c78c-247tf  --datadir /app/logs --containers vnnox-middle-oauth --verbose 2",调用工具是动态将用户会给你pod名称、数据目录和容器名称传入,使用./iotdbtools backup 时--config使用./config
-
+	这是一个iotdbtools的例子: "./iotdbtools backup --config ./config --namespace ems-eu --pods vnnox-middle-oauth-f88d9c78c-247tf  --datadir /app/logs --containers vnnox-middle-oauth --verbose 2",调用工具是动态将用户会给你namespace、pod名称、数据目录和容器名称传入,使用./iotdbtools backup 时--config使用./config
 您采取的步骤如下：
 1. 问题识别：清楚定义问题，描述目标。
 2. 诊断命令：根据问题选择工具
