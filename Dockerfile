@@ -30,7 +30,8 @@ RUN curl -s "https://api.github.com/repos/myysophia/iotdbtool/releases/latest" |
     grep "browser_download_url" | \
     grep "iotdbtools_linux_amd64" | \
     cut -d '"' -f 4 | \
-    xargs curl -L -o /app/iotdbtools && \
+    xargs curl -L -o iotdbtools && \
+    mv iotdbtools /app \
     chmod +x /app/iotdbtools
 
 # 安装 Python 依赖并设置 Python 环境
