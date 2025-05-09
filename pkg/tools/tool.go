@@ -28,11 +28,12 @@ type Tool func(input string) (string, error)
 
 // function call ，可以理解这里是hook点，可以在这里添加自己的工具
 var CopilotTools = map[string]Tool{
-	"search":  GoogleSearch,
-	"python":  PythonREPL,
-	"trivy":   Trivy,
-	"kubectl": Kubectl,
-	"jq":      JQ,
+	"search":     GoogleSearch,
+	"python":     PythonREPL,
+	"trivy":      Trivy,
+	"kubectl":    Kubectl,
+	"jq":         JQ,
+	"iotdbtools": IotDBTools,
 }
 
 // ToolPrompt 定义了与 LLM 交互的 JSON 格式
