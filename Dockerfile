@@ -25,6 +25,14 @@ RUN apk add --no-cache ca-certificates tzdata curl bash python3 py3-pip jq
 RUN curl --retry 3 -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
 RUN chmod +x kubectl && mv kubectl /usr/local/bin/
 
+# 下载并安装iotdbtools到工作目录
+RUN curl -s "https://api.github.com/repos/myysophia/iotdbtool/releases/latest" | \
+    grep "browser_download_url" | \
+    grep "iotdbtools_linux_amd64" | \
+    cut -d '"' -f 4 | \
+    xargs curl -L -o /app/iotdbtools && \
+    chmod +x /app/iotdbtools
+
 # 安装 Python 依赖并设置 Python 环境
 RUN pip3 install --no-cache-dir --upgrade pip
 RUN pip3 install --no-cache-dir kubernetes==29.0.0 pyyaml==6.0.1 pandas==2.2.1
