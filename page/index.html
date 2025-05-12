@@ -146,15 +146,15 @@
                                 <li><b>Assistant 层:</b> 核心智能引擎，负责对话管理、上下文理解和任务分解。</li>
                                 <li><b>Opsagent 层:</b> 对接多种大语言模型，进行推理、决策和生成。</li>
                                 <li><b>工具层:</b> 执行具体操作，如调用 Kubectl、运行 Python 脚本、执行 Trivy 扫描或进行智能资源查询。</li>
-                                <li><b>外部交互:</b> 主要与 Kubernetes API Server 交互来管理集群资源。</li>
+                                <li><b>外部交互:</b> 主要以readonly权限和Kubernetes API Server 交互管理集群资源。</li>
                             </ul>
                             <p><b>核心流程:</b> 用户请求 -> API层 -> Assistant层 -> (调用 LLM层 进行决策，调用 工具层 执行任务) -> 与 Kubernetes 集群交互 -> 结果经 Assistant层 整合后 -> API层 返回给用户。</p>
                         </div>
                     </div>
                     <div class="tech-stack">
                         <h3>主要技术栈</h3>
-                        <p><strong>前端:</strong> React + Tailwind CSS </p>
-                        <p><strong>后端:</strong> Go (Gin) + Kubernetes Go Client (client-go)</p>
+                        <p><strong>前端:</strong> React + Tailwind CSS + dify</p>
+                        <p><strong>后端:</strong> Go (Gin) + OpenAI Go Client</p>
                         <p><strong>AI 集成:</strong> 可插拔设计，支持 OpenAI, 谷歌 Gemini, 阿里通义千问等 LLM</p>
                         <p><strong>核心库:</strong> Cobra (CLI), Viper (配置)</p>
                         <p><strong>部署:</strong> Docker & Kubernetes</p>
