@@ -2,12 +2,12 @@ name: Docker ACR
 
 on:
   push:
-    branches: [ "main","feature/multiagent","feature/bisheng" ]
+    # branches: [ "main","feature/multiagent","feature/bisheng" ]
     tags: [ 'v*' ]
   pull_request:
     branches: [ "main" ]
 env:
-  IMAGE_NAME: ninesun0318/OpsAgent # 镜像名，格式为 用户名/镜像名
+  IMAGE_NAME: novacloud/OpsAgent # 镜像名，格式为 用户名/镜像名
 
 jobs:
   build:
