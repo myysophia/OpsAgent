@@ -1,81 +1,81 @@
-# name: Docker Hub
+name: Docker Hub
 
-# on:
-#   push:
-#     branches: [ "main","feature/multiagent" ]
-#     tags: [ 'v*' ]
-#   pull_request:
-#     branches: [ "main" ]
+on:
+  push:
+    # branches: [ "main","feature/multiagent" ]
+    tags: [ 'v*' ]
+  # pull_request:
+  #   branches: [ "main" ]
 
-# env:
-#   REGISTRY: docker.io # 修改为 Docker Hub 的注册表地址
-#   DOCKERHUB_USERNAME: ninesun0318 # Docker Hub 用户名
-#   IMAGE_NAME: ninesun0318/OpsAgent # 镜像名，格式为 用户名/镜像名
+env:
+  REGISTRY: docker.io # 修改为 Docker Hub 的注册表地址
+  DOCKERHUB_USERNAME: ninesun0318 # Docker Hub 用户名
+  IMAGE_NAME: ninesun0318/OpsAgent # 镜像名，格式为 用户名/镜像名
 
-# jobs:
-#   build:
-#     runs-on: ubuntu-latest
-#     timeout-minutes: 60  # 增加超时时间
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60  # 增加超时时间
 
-#     permissions:
-#       contents: read
-#       packages: write
+    permissions:
+      contents: read
+      packages: write
 
-#     steps:
-#       - name: Checkout repository
-#         uses: actions/checkout@v3
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-#       # 添加 Go 缓存
-#       - name: Set up Go
-#         uses: actions/setup-go@v4
-#         with:
-#           go-version: '1.24'
-#           cache: true
+      # 添加 Go 缓存
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24'
+          cache: true
 
-#       # 预下载依赖
-#       - name: Download Go modules
-#         run: |
-#           go mod download
-#         env:
-#           GOPROXY: "https://goproxy.io,https://proxy.golang.org,https://goproxy.cn,direct"
-#           GO111MODULE: "on"
-#           GOSUMDB: "off"
-#         continue-on-error: true  # 允许失败并继续
+      # 预下载依赖
+      - name: Download Go modules
+        run: |
+          go mod download
+        env:
+          GOPROXY: "https://goproxy.io,https://proxy.golang.org,https://goproxy.cn,direct"
+          GO111MODULE: "on"
+          GOSUMDB: "off"
+        continue-on-error: true  # 允许失败并继续
 
-#       - name: Setup Docker buildx
-#         uses: docker/setup-buildx-action@v2
+      - name: Setup Docker buildx
+        uses: docker/setup-buildx-action@v2
 
-#       - name: Log in to Docker Hub
-#         uses: docker/login-action@v2
-#         with:
-#           registry: ${{ env.REGISTRY }}
-#           username: ${{ env.DOCKERHUB_USERNAME }}
-#           password: ${{ secrets.DOCKERHUB_TOKEN }} # 确保在 GitHub Secrets 中配置了 DOCKERHUB_TOKEN
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ env.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }} # 确保在 GitHub Secrets 中配置了 DOCKERHUB_TOKEN
 
-#       - name: Extract metadata (tags, labels) for Docker
-#         id: meta
-#         uses: docker/metadata-action@v4
-#         with:
-#           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-#           tags: |
-#             type=semver,pattern={{version}}
-#             type=semver,pattern={{major}}.{{minor}}
-#             type=ref,event=branch
-#             type=ref,event=pr
-#             type=sha,format=short
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,format=short
 
-#       - name: Build and push Docker image
-#         uses: docker/build-push-action@v4
-#         with:
-#           context: .
-#           push: ${{ github.event_name != 'pull_request' }}
-#           tags: ${{ steps.meta.outputs.tags }}
-#           labels: ${{ steps.meta.outputs.labels }}
-#           cache-from: type=gha
-#           cache-to: type=gha,mode=max
-#           platforms: linux/amd64
-#           no-cache: ${{ github.event_name == 'pull_request' }}
-#           build-args: |
-#             BUILDKIT_INLINE_CACHE=1
-#           retries: 3  # 重试 3 次
-#           retry-delay: 5  # 每次重试间隔 5 秒
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+          no-cache: ${{ github.event_name == 'pull_request' }}
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+          retries: 3  # 重试 3 次
+          retry-delay: 5  # 每次重试间隔 5 秒
