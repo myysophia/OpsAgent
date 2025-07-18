@@ -1,0 +1,728 @@
+openapi: 3.0.3
+info:
+  title: OpsAgent API
+  description: |
+    OpsAgent 是一个基于 AI 的 Kubernetes 运维助手，提供智能化的集群管理、诊断和分析功能。
+    
+    ## 功能特性
+    - 智能执行 Kubernetes 命令
+    - 自动诊断集群问题
+    - 资源分析和优化建议
+    - 性能监控和统计
+    - 多集群上下文切换
+    
+    ## 认证方式
+    使用 JWT Token 进行身份验证，通过 `/login` 接口获取 token 后，在请求头中添加 `Authorization: Bearer <token>`。
+    
+    ## API Key
+    执行接口需要在请求头中提供 `X-API-Key` 用于调用 AI 服务。
+  version: v1.0.18
+  contact:
+    name: OpsAgent Team
+    url: https://github.com/myysophia/OpsAgent
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8080
+    description: 开发环境
+  - url: https://api.opsagent.com
+    description: 生产环境
+
+tags:
+  - name: Auth
+    description: 认证相关接口
+  - name: Core
+    description: 核心功能接口
+  - name: Performance
+    description: 性能监控接口
+  - name: Context
+    description: 上下文管理接口
+  - name: System
+    description: 系统信息接口
+
+paths:
+  /login:
+    post:
+      tags:
+        - Auth
+      summary: 用户登录
+      description: 使用用户名和密码进行登录，获取 JWT token
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              default:
+                summary: 默认登录
+                value:
+                  username: admin
+                  password: "AqA-dqR2@GGJ,8fjz%=6%Ehrv"
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+              examples:
+                success:
+                  summary: 登录成功
+                  value:
+                    token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    note: "Default credentials: admin/novastar"
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 用户名或密码错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/switch-context:
+    post:
+      tags:
+        - Context
+      summary: 切换 Kubernetes 上下文
+      description: 通过 RAG 服务智能识别并切换到合适的 Kubernetes 集群上下文
+      operationId: switchContext
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RAGRequest'
+            examples:
+              cluster_query:
+                summary: 查询集群上下文
+                value:
+                  query: "中国节点的 pod 状态"
+                  parameters: {}
+      responses:
+        '200':
+          description: 上下文切换成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RAGResponse'
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/version:
+    get:
+      tags:
+        - System
+      summary: 获取 API 版本信息
+      description: 返回当前 API 版本号
+      operationId: getVersion
+      responses:
+        '200':
+          description: 版本信息
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionResponse'
+              examples:
+                version:
+                  summary: 版本信息
+                  value:
+                    version: "v1.0.18"
+
+  /api/execute:
+    post:
+      tags:
+        - Core
+      summary: 执行命令
+      description: |
+        使用 AI 智能执行 Kubernetes 相关命令，支持自然语言指令。
+        
+        ## 支持的工具
+        - kubectl: 执行 Kubernetes 命令
+        - python: 执行 Python 脚本
+        - trivy: 扫描镜像漏洞
+        - jq: 处理 JSON 数据
+        - iotdbtools: 文件上传到 OSS
+        
+        ## 查询参数
+        - `show-thought`: 设置为 "true" 可显示 AI 的思考过程和工具调用历史
+      operationId: execute
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: show-thought
+          in: query
+          description: 是否显示思考过程
+          required: false
+          schema:
+            type: string
+            enum: ["true", "false"]
+            default: "false"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecuteRequest'
+            examples:
+              simple_query:
+                summary: 简单查询
+                value:
+                  instructions: "查看中国节点的 pod 状态"
+                  args: ""
+                  provider: "openai"
+                  baseUrl: "https://api.openai.com/v1"
+                  currentModel: "gpt-4o"
+                  cluster: "ask-cn"
+                  selectedModels: ["gpt-4o"]
+              complex_query:
+                summary: 复杂查询
+                value:
+                  instructions: "分析储能中国节点和 ems uat 环境的 pod 镜像版本、cpu/memory request、cpu/memory limit"
+                  args: ""
+                  provider: "openai"
+                  baseUrl: "https://api.openai.com/v1"
+                  currentModel: "gpt-4o"
+                  cluster: ""
+                  selectedModels: ["gpt-4o"]
+      responses:
+        '200':
+          description: 执行成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecuteResponse'
+              examples:
+                success:
+                  summary: 执行成功
+                  value:
+                    message: "找到 5 个 pod 正在运行中"
+                    status: "success"
+                success_with_thought:
+                  summary: 包含思考过程的成功响应
+                  value:
+                    message: "找到 5 个 pod 正在运行中"
+                    status: "success"
+                    thought: "用户想要查看中国节点的 pod 状态，我需要使用 kubectl 命令查询"
+                    question: "查看中国节点的 pod 状态"
+                    action:
+                      name: "kubectl"
+                      input: "kubectl --kubeconfig=./config --context=ask-cn --namespace=cn get pods"
+                    observation: "NAME                     READY   STATUS    RESTARTS   AGE"
+                    tools_history:
+                      - name: "kubectl"
+                        input: "kubectl --kubeconfig=./config --context=ask-cn --namespace=cn get pods"
+                        observation: "NAME                     READY   STATUS    RESTARTS   AGE"
+                        thought: "用户想要查看中国节点的 pod 状态"
+                processing:
+                  summary: 处理中
+                  value:
+                    message: "指令正在执行中，请稍候..."
+                    status: "processing"
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 未授权
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 执行失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/diagnose:
+    post:
+      tags:
+        - Core
+      summary: 诊断资源
+      description: 诊断指定的 Kubernetes 资源，识别潜在问题
+      operationId: diagnose
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: model
+          in: query
+          description: 使用的 AI 模型
+          required: false
+          schema:
+            type: string
+            default: "gpt-4o"
+        - name: cluster
+          in: query
+          description: 目标集群
+          required: false
+          schema:
+            type: string
+            default: "default"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiagnoseRequest'
+            examples:
+              pod_diagnose:
+                summary: 诊断 Pod
+                value:
+                  name: "nginx-deployment-abc123"
+                  namespace: "default"
+      responses:
+        '200':
+          description: 诊断完成
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiagnoseResponse'
+              examples:
+                success:
+                  summary: 诊断成功
+                  value:
+                    message: "Diagnosing pod nginx-deployment-abc123 in namespace default using model gpt-4o on cluster default"
+                    status: "success"
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 未授权
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/analyze:
+    post:
+      tags:
+        - Core
+      summary: 分析资源
+      description: 分析指定的 Kubernetes 资源，提供优化建议
+      operationId: analyze
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: model
+          in: query
+          description: 使用的 AI 模型
+          required: false
+          schema:
+            type: string
+            default: "gpt-4o"
+        - name: cluster
+          in: query
+          description: 目标集群
+          required: false
+          schema:
+            type: string
+            default: "default"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalyzeRequest'
+            examples:
+              deployment_analyze:
+                summary: 分析 Deployment
+                value:
+                  resource: "deployment/nginx-deployment"
+      responses:
+        '200':
+          description: 分析完成
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyzeResponse'
+              examples:
+                success:
+                  summary: 分析成功
+                  value:
+                    message: "Analyzing resource deployment/nginx-deployment using model gpt-4o on cluster default"
+                    status: "success"
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 未授权
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/perf/stats:
+    get:
+      tags:
+        - Performance
+      summary: 获取性能统计信息
+      description: 获取当前系统的性能指标和统计信息
+      operationId: getPerfStats
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 性能统计信息
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PerfStatsResponse'
+              examples:
+                stats:
+                  summary: 性能统计
+                  value:
+                    stats:
+                      execute_total: 
+                        count: 10
+                        total_duration: "5.2s"
+                        average_duration: "520ms"
+                      execute_assistant:
+                        count: 10
+                        total_duration: "4.8s"
+                        average_duration: "480ms"
+                    status: "success"
+        '401':
+          description: 未授权
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/perf/reset:
+    post:
+      tags:
+        - Performance
+      summary: 重置性能统计信息
+      description: 清空当前的性能统计数据
+      operationId: resetPerfStats
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 重置成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResetPerfStatsResponse'
+              examples:
+                success:
+                  summary: 重置成功
+                  value:
+                    message: "性能统计信息已重置"
+                    status: "success"
+        '401':
+          description: 未授权
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT Token 认证，通过 /login 接口获取
+
+  schemas:
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          description: 用户名
+          example: admin
+        password:
+          type: string
+          description: 密码
+          example: "AqA-dqR2@GGJ,8fjz%=6%Ehrv"
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT Token
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        note:
+          type: string
+          description: 登录提示信息
+          example: "Default credentials: admin/novastar"
+
+    RAGRequest:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+          description: 查询语句，用于获取上下文信息
+          example: "中国节点的 pod 状态"
+        parameters:
+          type: object
+          description: 额外参数
+          additionalProperties: true
+          example: {}
+
+    RAGResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: 响应代码
+          example: 200
+        message:
+          type: string
+          description: 响应消息
+          example: "success"
+        data:
+          type: object
+          description: 返回的上下文数据
+          additionalProperties: true
+
+    ExecuteRequest:
+      type: object
+      required:
+        - instructions
+        - args
+      properties:
+        instructions:
+          type: string
+          description: 执行指令
+          example: "查看中国节点的 pod 状态"
+        args:
+          type: string
+          description: 执行参数
+          example: ""
+        provider:
+          type: string
+          description: AI 服务提供商
+          example: "openai"
+        baseUrl:
+          type: string
+          description: AI 服务基础 URL
+          example: "https://api.openai.com/v1"
+        currentModel:
+          type: string
+          description: 当前使用的模型
+          example: "gpt-4o"
+        cluster:
+          type: string
+          description: 目标集群
+          example: "ask-cn"
+        selectedModels:
+          type: array
+          description: 可选择的模型列表
+          items:
+            type: string
+          example: ["gpt-4o"]
+
+    ExecuteResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: 执行结果消息
+          example: "找到 5 个 pod 正在运行中"
+        status:
+          type: string
+          description: 执行状态
+          enum: ["success", "processing", "error"]
+          example: "success"
+        thought:
+          type: string
+          description: AI 思考过程（仅在 show-thought=true 时返回）
+          example: "用户想要查看中国节点的 pod 状态，我需要使用 kubectl 命令查询"
+        question:
+          type: string
+          description: 解析后的问题（仅在 show-thought=true 时返回）
+          example: "查看中国节点的 pod 状态"
+        action:
+          type: object
+          description: 执行的动作（仅在 show-thought=true 时返回）
+          properties:
+            name:
+              type: string
+              description: 工具名称
+              example: "kubectl"
+            input:
+              type: string
+              description: 工具输入
+              example: "kubectl --kubeconfig=./config --context=ask-cn --namespace=cn get pods"
+        observation:
+          type: string
+          description: 观察结果（仅在 show-thought=true 时返回）
+          example: "NAME                     READY   STATUS    RESTARTS   AGE"
+        tools_history:
+          type: array
+          description: 工具使用历史（仅在 show-thought=true 时返回）
+          items:
+            $ref: '#/components/schemas/ToolHistory'
+        raw_response:
+          type: boolean
+          description: 是否为原始响应
+          example: false
+
+    ToolHistory:
+      type: object
+      properties:
+        name:
+          type: string
+          description: 工具名称
+          example: "kubectl"
+        input:
+          type: string
+          description: 工具输入
+          example: "kubectl --kubeconfig=./config --context=ask-cn --namespace=cn get pods"
+        observation:
+          type: string
+          description: 工具输出
+          example: "NAME                     READY   STATUS    RESTARTS   AGE"
+        thought:
+          type: string
+          description: 思考过程
+          example: "用户想要查看中国节点的 pod 状态"
+
+    DiagnoseRequest:
+      type: object
+      required:
+        - name
+        - namespace
+      properties:
+        name:
+          type: string
+          description: 资源名称
+          example: "nginx-deployment-abc123"
+        namespace:
+          type: string
+          description: 命名空间
+          example: "default"
+
+    DiagnoseResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: 诊断结果
+          example: "Diagnosing pod nginx-deployment-abc123 in namespace default using model gpt-4o on cluster default"
+        status:
+          type: string
+          description: 诊断状态
+          enum: ["success", "error"]
+          example: "success"
+
+    AnalyzeRequest:
+      type: object
+      required:
+        - resource
+      properties:
+        resource:
+          type: string
+          description: 要分析的资源
+          example: "deployment/nginx-deployment"
+
+    AnalyzeResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: 分析结果
+          example: "Analyzing resource deployment/nginx-deployment using model gpt-4o on cluster default"
+        status:
+          type: string
+          description: 分析状态
+          enum: ["success", "error"]
+          example: "success"
+
+    VersionResponse:
+      type: object
+      properties:
+        version:
+          type: string
+          description: API 版本号
+          example: "v1.0.18"
+
+    PerfStatsResponse:
+      type: object
+      properties:
+        stats:
+          type: object
+          description: 性能统计数据
+          additionalProperties:
+            type: object
+            properties:
+              count:
+                type: integer
+                description: 调用次数
+              total_duration:
+                type: string
+                description: 总耗时
+              average_duration:
+                type: string
+                description: 平均耗时
+        status:
+          type: string
+          description: 状态
+          enum: ["success"]
+          example: "success"
+
+    ResetPerfStatsResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: 重置结果消息
+          example: "性能统计信息已重置"
+        status:
+          type: string
+          description: 重置状态
+          enum: ["success"]
+          example: "success"
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: 错误信息
+          example: "Invalid credentials"
+        code:
+          type: integer
+          description: 错误代码（可选）
+          example: 400
+        message:
+          type: string
+          description: 错误消息（可选）
+          example: "请求参数错误"

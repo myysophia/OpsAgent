@@ -177,3 +177,4 @@ config*
 .deploy.yaml
 .credentials
 *.tar.gz
+openapi_login_execute.yaml
