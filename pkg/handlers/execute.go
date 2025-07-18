@@ -22,13 +22,13 @@ import (
 
 // ExecuteRequest 执行请求结构
 type ExecuteRequest struct {
-	Instructions   string   `json:"instructions" binding:"required"`
-	Args           string   `json:"args" binding:"required"`
-	Provider       string   `json:"provider"`
-	BaseUrl        string   `json:"baseUrl"`
-	CurrentModel   string   `json:"currentModel"`
-	Cluster        string   `json:"cluster"`
-	SelectedModels []string `json:"selectedModels"`
+	Instructions string `json:"instructions" binding:"required"`
+	Args         string `json:"args" binding:"required"`
+	Provider     string `json:"provider"`
+	BaseUrl      string `json:"baseUrl"`
+	CurrentModel string `json:"currentModel"`
+	Cluster      string `json:"cluster"`
+	// SelectedModels []string `json:"selectedModels"`
 }
 
 // AIResponse AI 响应结构
@@ -379,7 +379,7 @@ func Execute(c *gin.Context) {
 		zap.String("provider", req.Provider),
 		zap.String("baseUrl", req.BaseUrl),
 		zap.String("currentModel", req.CurrentModel),
-		zap.Strings("selectedModels", req.SelectedModels),
+		// zap.Strings("selectedModels", req.SelectedModels),
 		zap.String("cluster", req.Cluster),
 		zap.String("apiKey", "***"),
 	)
