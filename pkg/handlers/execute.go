@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -350,8 +351,11 @@ func Execute(c *gin.Context) {
 		zap.Bool("show-thought", showThought),
 	)
 
-	// 获取API Key
-	apiKey := c.GetHeader("X-API-Key")
+	// 获取API Key - 优先从环境变量读取，如果没有再从header读取
+	apiKey := os.Getenv("API-KEY")
+	if apiKey == "" {
+		apiKey = c.GetHeader("X-API-Key")
+	}
 	if apiKey == "" {
 		logger.Error("缺少 API Key")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing API Key"})
